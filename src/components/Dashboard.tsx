@@ -1,0 +1,280 @@
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { BanknotesIcon, UsersIcon, SparklesIcon, ArrowRightIcon, ArrowPathIcon, TrashIcon, HandThumbUpIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { calculateDebts } from '../utils/debtCalculator';
+import { getTripInsights } from '../services/geminiService';
+import { formatINR } from '../utils/formatters';
+import type { Trip } from '../types';
+
+const Dashboard: React.FC<{ trip: Trip, myId: string, onAddExpense: () => void, onDeleteExpense: (id: string) => void }> = ({ trip, myId, onAddExpense, onDeleteExpense }) => {
+    const [activeTab, setActiveTab] = useState<'expenses' | 'summary' | 'insights'>('expenses');
+    const [insights, setInsights] = useState<string | null>(null);
+    const [loadingInsights, setLoadingInsights] = useState(false);
+
+    // --- Core Personal Budget Logic ---
+    const tripTotal = useMemo(() => trip.expenses.reduce((sum, e) => sum + e.amount, 0), [trip]);
+
+    const myConsumption = useMemo(() => {
+        return trip.expenses.reduce((sum, e) => {
+            if (e.participantIds.includes(myId)) {
+                return sum + (e.amount / e.participantIds.length);
+            }
+            return sum;
+        }, 0);
+    }, [trip, myId]);
+
+    const myPayments = useMemo(() => {
+        return trip.expenses.reduce((sum, e) => {
+            if (e.payerId === myId) return sum + e.amount;
+            return sum;
+        }, 0);
+    }, [trip, myId]);
+
+    const myBalance = myPayments - myConsumption;
+
+    const debts = useMemo(() => calculateDebts(trip), [trip]);
+
+    const fetchInsights = useCallback(async () => {
+        if (insights) return;
+        setLoadingInsights(true);
+        try {
+            const data = await getTripInsights(trip);
+            setInsights(data || "No insights found.");
+        } catch (e) {
+            console.error(e);
+            setInsights("Could not fetch insights at this time.");
+        } finally {
+            setLoadingInsights(false);
+        }
+    }, [trip, insights]);
+
+    // Fix: Clean useEffect without setting state synchronously in way that loops
+    useEffect(() => {
+        if (activeTab === 'insights' && !insights) {
+            fetchInsights();
+        }
+    }, [activeTab]);
+
+    return (
+        <div className="pb-40 px-4 md:px-6 pt-10 max-w-7xl mx-auto w-full overflow-hidden">
+            <div className="lg:grid lg:grid-cols-12 lg:gap-10 lg:items-start">
+                {/* Left Column - Net Standing */}
+                <div className="lg:col-span-5 space-y-6 mb-12 lg:mb-0 lg:sticky lg:top-28">
+                    <div className="bg-white p-8 rounded-[48px] border border-white shadow-2xl shadow-slate-200 card-3d">
+                        <div className="flex justify-between items-start mb-10">
+                            <div>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-2">My Net Standing</p>
+                                <h2 className={`text-5xl font-black tracking-tighter ${myBalance >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                    {myBalance >= 0 ? '+' : ''}{formatINR(myBalance)}
+                                </h2>
+                                <div className="mt-2 flex items-center gap-2">
+                                    <div className={`w-2 h-2 rounded-full ${myBalance >= 0 ? 'bg-emerald-500' : 'bg-rose-500'}`}></div>
+                                    <span className="text-[11px] font-bold text-slate-400">{myBalance >= 0 ? 'You are getting back' : 'You owe to the squad'}</span>
+                                </div>
+                            </div>
+                            <div className="bg-slate-900 px-6 py-4 rounded-[32px] shadow-2xl shadow-slate-300 text-center flex flex-col items-center">
+                                <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Group Spend</span>
+                                <span className="text-xl font-black text-white">{formatINR(tripTotal)}</span>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-8 border-t border-slate-50 pt-10">
+                            <div className="relative overflow-hidden p-6 bg-slate-50 rounded-[32px]">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Your Personal usage</p>
+                                <p className="text-2xl font-black text-slate-900">{formatINR(myConsumption)}</p>
+                                <div className="mt-1 h-1 w-full bg-slate-200 rounded-full overflow-hidden">
+                                    <div className="h-full bg-indigo-500" style={{ width: `${Math.min(100, (myConsumption / tripTotal || 0) * 100)}%` }}></div>
+                                </div>
+                            </div>
+                            <div className="relative overflow-hidden p-6 bg-indigo-50 rounded-[32px]">
+                                <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-1">Total You Paid</p>
+                                <p className="text-2xl font-black text-indigo-600">{formatINR(myPayments)}</p>
+                                <BanknotesIcon className="absolute -right-2 -bottom-2 w-16 h-16 text-indigo-100/50 -rotate-12" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+                {/* Right Column - Tabs & Content */}
+                <div className="lg:col-span-7 w-full">
+
+                    {/* Pill Navigation */}
+                    <div className="flex gap-2 overflow-x-auto no-scrollbar mb-10 p-2 bg-slate-200/40 rounded-[36px] border border-slate-200/50 backdrop-blur-md">
+                        {[
+                            { id: 'expenses', label: 'Expenses', icon: BanknotesIcon },
+                            { id: 'summary', label: 'Settlement', icon: UsersIcon },
+                            { id: 'insights', label: 'AI Coach', icon: SparklesIcon }
+                        ].map(tab => (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id as any)}
+                                className={`flex-1 flex items-center justify-center gap-3 px-8 py-5 rounded-[30px] font-black text-sm transition-all duration-300 ${activeTab === tab.id ? 'bg-white text-slate-900 shadow-2xl scale-[1.05]' : 'text-slate-400 hover:text-slate-600'}`}
+                            >
+                                <tab.icon className={`w-5 h-5 ${activeTab === tab.id ? 'text-indigo-600' : ''}`} />
+                                {tab.label}
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        {activeTab === 'expenses' && (
+                            <div className="space-y-4">
+                                {trip.expenses.length === 0 ? (
+                                    <div className="text-center py-32 bg-white/40 rounded-[48px] border-4 border-dashed border-slate-200">
+                                        <div className="bg-slate-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
+                                            <BanknotesIcon className="w-10 h-10 text-slate-300" />
+                                        </div>
+                                        <p className="text-slate-500 font-bold text-lg tracking-tight">Your expense feed is empty.</p>
+                                        <button onClick={onAddExpense} className="text-indigo-600 font-black mt-3 text-sm uppercase tracking-[0.2em] hover:tracking-[0.3em] transition-all">Add First Bill</button>
+                                    </div>
+                                ) : (
+                                    trip.expenses.slice().reverse().map(e => (
+                                        <div key={e.id} className={`bg-white p-6 rounded-[40px] border border-white shadow-xl shadow-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between group card-3d ${!e.participantIds.includes(myId) ? 'opacity-40 grayscale-[0.8]' : ''}`}>
+                                            <div className="flex items-center gap-6 w-full sm:w-auto">
+                                                <div className="w-16 h-16 bg-slate-50 rounded-[28px] flex items-center justify-center text-3xl shadow-inner group-hover:bg-indigo-50 transition-colors shrink-0">
+                                                    {e.category === 'Food' && '🍛'}
+                                                    {e.category === 'Drink' && '🥤'}
+                                                    {e.category === 'Rickshaw' && '🛺'}
+                                                    {e.category === 'Stay' && '🏡'}
+                                                    {e.category === 'Water' && '💧'}
+                                                    {e.category === 'Shopping' && '🛍️'}
+                                                    {e.category === 'Other' && '📍'}
+                                                    {/* Fallback if category didn't match */}
+                                                    {!['Food', 'Drink', 'Rickshaw', 'Stay', 'Water', 'Shopping', 'Other'].includes(e.category) && '🧾'}
+                                                </div>
+                                                <div>
+                                                    <h4 className="font-black text-slate-900 text-lg tracking-tight leading-none mb-1 break-words line-clamp-2">{e.description}</h4>
+                                                    <p className="text-[10px] font-bold text-slate-400 mb-2">{new Date(e.date).toLocaleDateString('en-IN', { weekday: 'short', hour: '2-digit', minute: '2-digit' })}</p>
+                                                    <div className="flex flex-wrap items-center gap-2">
+                                                        <span className={`text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest ${e.payerId === myId ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200' : 'bg-slate-100 text-slate-500'}`}>
+                                                            {e.payerId === myId ? 'You Paid' : trip.members.find(m => m.id === e.payerId)?.name || 'Unknown'}
+                                                        </span>
+                                                        {!e.participantIds.includes(myId) && (
+                                                            <span className="text-[9px] font-black bg-rose-50 text-rose-500 px-3 py-1 rounded-full uppercase tracking-widest">Not For You</span>
+                                                        )}
+                                                        {e.participantIds.includes(myId) && (
+                                                            <span className="text-[9px] font-black bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full uppercase tracking-widest">In Your share</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-5 mt-4 sm:mt-0 w-full sm:w-auto justify-between sm:justify-end">
+                                                <div className="text-right">
+                                                    <span className="block text-2xl font-black text-slate-900">{formatINR(e.amount)}</span>
+                                                    {e.participantIds.includes(myId) && (
+                                                        <span className="text-[11px] text-indigo-500 font-black">₹{(e.amount / e.participantIds.length).toFixed(0)} each</span>
+                                                    )}
+                                                </div>
+                                                {(e.createdBy === myId || trip.creatorId === myId) && (
+                                                    <button onClick={() => onDeleteExpense(e.id)} className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity p-3 bg-rose-50 text-rose-400 rounded-2xl hover:bg-rose-500 hover:text-white">
+                                                        <TrashIcon className="w-5 h-5" />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        )}
+
+                        {activeTab === 'summary' && (
+                            <div className="space-y-8">
+                                <div className="bg-white p-10 rounded-[48px] shadow-2xl shadow-slate-100 border border-white">
+                                    <h3 className="text-2xl font-black text-slate-900 mb-10 flex items-center gap-4">
+                                        <UsersIcon className="w-8 h-8 text-indigo-500" /> Settlement Plan
+                                    </h3>
+                                    <div className="space-y-4">
+                                        {debts.length === 0 ? (
+                                            <div className="text-center py-20">
+                                                <div className="bg-emerald-50 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6">
+                                                    <HandThumbUpIcon className="w-12 h-12 text-emerald-500" />
+                                                </div>
+                                                <p className="text-slate-400 font-black text-xl">Perfectly Balanced! 🎉</p>
+                                            </div>
+                                        ) : (
+                                            debts.map((d, idx) => (
+                                                <div key={idx} className={`flex flex-col sm:flex-row items-center justify-between p-8 rounded-[40px] border transition-all duration-500 ${d.from === myId || d.to === myId ? 'bg-indigo-50 border-indigo-200 shadow-xl scale-[1.02]' : 'bg-slate-50 border-transparent shadow-sm'}`}>
+                                                    <div className="flex items-center gap-6 mb-4 sm:mb-0">
+                                                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-lg shadow-inner ${d.from === myId ? 'bg-rose-500 text-white' : 'bg-white text-slate-600 border border-slate-100'}`}>
+                                                            {trip.members.find(m => m.id === d.from)?.name.charAt(0)}
+                                                        </div>
+                                                        <div className="bg-indigo-100 p-2 rounded-full">
+                                                            <ArrowRightIcon className="w-5 h-5 text-indigo-600" />
+                                                        </div>
+                                                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-lg shadow-inner ${d.to === myId ? 'bg-emerald-500 text-white' : 'bg-white text-slate-600 border border-slate-100'}`}>
+                                                            {trip.members.find(m => m.id === d.to)?.name.charAt(0)}
+                                                        </div>
+                                                        <div className="ml-2">
+                                                            <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">
+                                                                {d.from === myId ? 'YOU OWE' : trip.members.find(m => m.id === d.from)?.name}
+                                                            </p>
+                                                            <p className="text-lg font-black text-slate-800">to {d.to === myId ? 'YOU' : trip.members.find(m => m.id === d.to)?.name}</p>
+                                                        </div>
+                                                    </div>
+                                                    <span className={`text-3xl font-black ${d.from === myId ? 'text-rose-600' : (d.to === myId ? 'text-emerald-600' : 'text-slate-900')}`}>
+                                                        {formatINR(d.amount)}
+                                                    </span>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'insights' && (
+                            <div className="bg-slate-900 p-10 rounded-[48px] text-white shadow-2xl relative overflow-hidden">
+                                <SparklesIcon className="absolute -right-10 -top-10 w-64 h-64 text-indigo-500/10 rotate-12" />
+                                <div className="flex items-center justify-between mb-12 relative z-10">
+                                    <div>
+                                        <h3 className="text-3xl font-black flex items-center gap-4">AI Travel Coach</h3>
+                                        <p className="text-indigo-400 text-[10px] font-black uppercase tracking-[0.3em] mt-2">Smart Analysis for India Trips</p>
+                                    </div>
+                                    <button onClick={() => { setInsights(null); fetchInsights(); }} className="bg-white/10 p-4 rounded-3xl hover:bg-white/20 transition-all active:rotate-180 duration-500">
+                                        <ArrowPathIcon className={`w-8 h-8 ${loadingInsights ? 'animate-spin' : ''}`} />
+                                    </button>
+                                </div>
+                                {loadingInsights ? (
+                                    <div className="py-24 text-center relative z-10">
+                                        <div className="w-20 h-20 border-4 border-slate-700 border-t-indigo-400 rounded-full animate-spin mx-auto mb-8 shadow-2xl shadow-indigo-500/20"></div>
+                                        <p className="animate-pulse font-black text-2xl text-indigo-200 tracking-tight">Crafting Your Strategy...</p>
+                                        <p className="text-slate-500 text-sm mt-4 font-bold">Simulating budgets and travel hacks</p>
+                                    </div>
+                                ) : (
+                                    <div className="prose prose-invert max-w-none text-indigo-50/80 italic leading-relaxed whitespace-pre-line text-xl font-medium relative z-10">
+                                        {insights || "Tap the refresh icon and Gemini will tell you who's spending too much and give you secret local hacks for your destination!"}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* 3D Glass Dock */}
+            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-lg z-40">
+                <div className="glass px-6 py-4 rounded-[36px] border border-white/50 shadow-2xl flex items-center justify-between floating-dock bg-white/80 backdrop-blur-lg">
+                    <div className="flex gap-4 sm:gap-6 shrink-0">
+                        <div className="flex flex-col">
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Active Room</span>
+                            <span className="text-base sm:text-lg font-black text-slate-900 tracking-tighter">{trip.id}</span>
+                        </div>
+                        <div className="h-10 w-px bg-slate-200 self-center"></div>
+                        <div className="flex flex-col">
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Logged As</span>
+                            <span className="text-base sm:text-lg font-black text-indigo-600 tracking-tighter truncate max-w-[80px] sm:max-w-none">{trip.members.find(m => m.id === myId)?.name.split(' ')[0]}</span>
+                        </div>
+                    </div>
+                    <button
+                        onClick={onAddExpense}
+                        className="bg-slate-900 text-white px-6 sm:px-10 py-4 sm:py-5 rounded-[28px] font-black text-md sm:text-lg flex items-center gap-2 sm:gap-3 shadow-2xl hover:bg-indigo-600 transition-all active:scale-90"
+                    >
+                        <PlusIcon className="w-5 h-5 sm:w-6 sm:h-6" /> <span className="hidden sm:inline">Log Bill</span><span className="sm:hidden">Add</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default Dashboard;
