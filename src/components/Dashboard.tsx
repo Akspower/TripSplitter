@@ -207,27 +207,45 @@ const Dashboard: React.FC<{ trip: Trip, myId: string, onAddExpense: () => void, 
                                             </div>
                                         ) : (
                                             debts.map((d, idx) => (
-                                                <div key={idx} className={`flex flex-col sm:flex-row items-center justify-between p-8 rounded-[40px] border transition-all duration-500 ${d.from === myId || d.to === myId ? 'bg-indigo-50 border-indigo-200 shadow-xl scale-[1.02]' : 'bg-slate-50 border-transparent shadow-sm'}`}>
-                                                    <div className="flex items-center gap-6 mb-4 sm:mb-0">
-                                                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-lg shadow-inner ${d.from === myId ? 'bg-rose-500 text-white' : 'bg-white text-slate-600 border border-slate-100'}`}>
+                                                <div key={idx} className={`relative overflow-hidden group flex flex-col sm:flex-row items-center justify-between p-5 sm:p-8 rounded-[32px] sm:rounded-[40px] border transition-all duration-300 ${d.from === myId || d.to === myId ? 'bg-indigo-50/80 border-indigo-200 shadow-xl shadow-indigo-100/50 scale-[1.01]' : 'bg-white border-slate-100 shadow-sm hover:shadow-md'}`}>
+
+                                                    {/* Decorator for active user */}
+                                                    {(d.from === myId || d.to === myId) && <div className="absolute top-0 left-0 w-1.5 h-full bg-indigo-500"></div>}
+
+                                                    <div className="flex items-center gap-3 sm:gap-6 mb-4 sm:mb-0 w-full sm:w-auto">
+                                                        {/* From Avatar */}
+                                                        <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center font-black text-lg shadow-inner shrink-0 ${d.from === myId ? 'bg-gradient-to-br from-rose-400 to-rose-600 text-white shadow-rose-200' : 'bg-slate-50 text-slate-600 border border-slate-100'}`}>
                                                             {trip.members.find(m => m.id === d.from)?.name.charAt(0)}
                                                         </div>
-                                                        <div className="bg-indigo-100 p-2 rounded-full">
-                                                            <ArrowRightIcon className="w-5 h-5 text-indigo-600" />
+
+                                                        {/* Arrow */}
+                                                        <div className="bg-indigo-50 p-1.5 sm:p-2 rounded-full shrink-0 rotate-90 sm:rotate-0">
+                                                            <ArrowRightIcon className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-400" />
                                                         </div>
-                                                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-lg shadow-inner ${d.to === myId ? 'bg-emerald-500 text-white' : 'bg-white text-slate-600 border border-slate-100'}`}>
+
+                                                        {/* To Avatar */}
+                                                        <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center font-black text-lg shadow-inner shrink-0 ${d.to === myId ? 'bg-gradient-to-br from-emerald-400 to-emerald-600 text-white shadow-emerald-200' : 'bg-slate-50 text-slate-600 border border-slate-100'}`}>
                                                             {trip.members.find(m => m.id === d.to)?.name.charAt(0)}
                                                         </div>
-                                                        <div className="ml-2">
-                                                            <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">
+
+                                                        {/* Text Info - Truncated */}
+                                                        <div className="ml-1 sm:ml-2 min-w-0 flex-1">
+                                                            <p className="text-[10px] sm:text-[11px] font-black text-slate-400 uppercase tracking-widest mb-0.5 truncate">
                                                                 {d.from === myId ? 'YOU OWE' : trip.members.find(m => m.id === d.from)?.name}
                                                             </p>
-                                                            <p className="text-lg font-black text-slate-800">to {d.to === myId ? 'YOU' : trip.members.find(m => m.id === d.to)?.name}</p>
+                                                            <p className="text-base sm:text-lg font-black text-slate-800 truncate leading-tight">
+                                                                To {d.to === myId ? 'YOU' : trip.members.find(m => m.id === d.to)?.name}
+                                                            </p>
                                                         </div>
                                                     </div>
-                                                    <span className={`text-3xl font-black ${d.from === myId ? 'text-rose-600' : (d.to === myId ? 'text-emerald-600' : 'text-slate-900')}`}>
-                                                        {formatINR(d.amount)}
-                                                    </span>
+
+                                                    {/* Amount */}
+                                                    <div className="w-full sm:w-auto text-right border-t sm:border-t-0 border-slate-100 pt-3 sm:pt-0 mt-2 sm:mt-0">
+                                                        <span className={`text-2xl sm:text-3xl font-black block sm:inline ${d.from === myId ? 'text-rose-600' : (d.to === myId ? 'text-emerald-600' : 'text-slate-900')}`}>
+                                                            {formatINR(d.amount)}
+                                                        </span>
+                                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block sm:hidden">to settle</span>
+                                                    </div>
                                                 </div>
                                             ))
                                         )}
