@@ -129,7 +129,7 @@ export default function App() {
 
   if (currentTrip) {
     return (
-      <div className="min-h-screen bg-slate-50 selection:bg-indigo-100 selection:text-indigo-900 font-sans">
+      <div className="min-h-[100dvh] bg-slate-50 selection:bg-indigo-100 selection:text-indigo-900 font-sans">
         <Header
           key="active-session-header"
           tripName={currentTrip.name}
@@ -161,8 +161,8 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 selection:bg-indigo-100 selection:text-indigo-900 font-sans relative overflow-hidden flex flex-col">
-      <Header key="landing-header" onReset={handleReset} />
+    <div className="min-h-[100dvh] bg-slate-50 selection:bg-indigo-100 selection:text-indigo-900 font-sans relative overflow-hidden flex flex-col">
+      <Header key={`header-${viewMode}`} onReset={handleReset} />
 
       <div className="flex-1 flex flex-col justify-center items-center px-6 relative z-10 pb-20">
 

@@ -57,26 +57,41 @@ export const getTripInsights = async (trip: Trip) => {
     const month = startDate.toLocaleString('en-IN', { month: 'long' });
     const tripDays = Math.ceil((new Date(trip.endDate).getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
+    // Calculate Spending Stats
+    const spending: Record<string, number> = {};
+    trip.members.forEach(m => spending[m.id] = 0);
+    trip.expenses.forEach(e => {
+        spending[e.payerId] = (spending[e.payerId] || 0) + e.amount;
+    });
+
+    const sortedSpenders = Object.entries(spending)
+        .sort(([, a], [, b]) => b - a)
+        .map(([id, amt]) => ({
+            name: trip.members.find(m => m.id === id)?.name || 'Unknown',
+            amt
+        }));
+
+    const highestPayer = sortedSpenders[0];
+    const topSpendersText = sortedSpenders.slice(0, 3).map(s => `${s.name} (₹${s.amt})`).join(', ');
+
     const prompt = `
-    Analyze this trip to ${trip.destination} for the "${trip.name}" group.
+    Analyze this trip to ${trip.destination}.
+    
+    **Hard Stats (Use these):**
+    - Top Spender: ${highestPayer?.name || 'None'} (₹${highestPayer?.amt || 0})
+    - All Spenders: ${topSpendersText}
+    - Total Expenses: ${trip.expenses.length}
     
     **Context:**
     - Dates: ${trip.startDate} to ${trip.endDate} (${tripDays} days in ${month})
-    - People: ${trip.members.map(m => m.name).join(', ')}
     - Vibe: ${trip.tripStyle || 'Adventure'}
-    - Budget: ${trip.budgetType || 'Moderate'}
     
-    **Expenses so far (₹):**
-    ${trip.expenses.length > 0 ? trip.expenses.slice(-10).map(e =>
-        `- ${e.description}: ₹${e.amount} (${e.category}) by ${trip.members.find(m => m.id === e.payerId)?.name}`
-    ).join('\n') : 'No expenses yet.'}
+    **Task (Be fast, friendly & concise - Max 100 words):**
+    1. 💸 **Money Update:** Mention explicitly who paid the most (${highestPayer?.name}).
+    2. 🗺️ **Local Guide:** 2 specific food/places for ${trip.destination} in ${month}.
+    3. 💡 **Pro Tip:** Short hack for this trip.
 
-    **Task (Keep it fast & friendly! Max 150 words):**
-    1. 💸 **Money Talk:** Who is paying the most? Any quick balance update?
-    2. 🗺️ **Local Secrets:** Give 2 specific hidden gems or food spots in ${trip.destination} for ${month}.
-    3. 💡 **Pro Hack:** One money-saving tip for ${trip.budgetType} travelers here.
-
-    Output in concise markdown. Be super encouraging!
+    Output using "Bestie" persona. Use emojis.
     `;
 
     try {

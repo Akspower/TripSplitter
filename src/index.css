@@ -1,1 +1,53 @@
 @import "tailwindcss";
+
+@layer base {
+    html {
+        scroll-behavior: smooth;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+        background-color: #f8fafc;
+        min-height: 100dvh;
+        overscroll-behavior-y: none;
+    }
+
+    /* Custom Scrollbar for Chrome/Safari/Edge */
+    ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 99px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+    }
+
+    /* Hide scrollbar utility */
+    .no-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+
+    .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+}
+
+@layer utilities {
+    .glass {
+        @apply bg-white/70 backdrop-blur-lg border-b border-white/20;
+    }
+
+    .card-3d {
+        @apply transition-transform duration-300 hover:scale-[1.02] hover:shadow-2xl;
+    }
+}
