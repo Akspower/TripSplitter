@@ -4,9 +4,11 @@ import { calculateDebts } from '../utils/debtCalculator';
 import { getTripInsights } from '../services/groqService';
 import { formatINR } from '../utils/formatters';
 import type { Trip } from '../types';
+import Analytics from './Analytics';
+import { ChartBarIcon } from '@heroicons/react/24/outline';
 
 const Dashboard: React.FC<{ trip: Trip, myId: string, onAddExpense: () => void, onDeleteExpense: (id: string) => void }> = ({ trip, myId, onAddExpense, onDeleteExpense }) => {
-    const [activeTab, setActiveTab] = useState<'expenses' | 'summary' | 'insights'>('expenses');
+    const [activeTab, setActiveTab] = useState<'expenses' | 'summary' | 'insights' | 'analytics'>('expenses');
     const [insights, setInsights] = useState<string | null>(null);
     const [loadingInsights, setLoadingInsights] = useState(false);
     const prevExpenseCount = useRef(trip.expenses.length);
@@ -114,6 +116,7 @@ const Dashboard: React.FC<{ trip: Trip, myId: string, onAddExpense: () => void, 
                         {[
                             { id: 'expenses', label: 'Expenses', icon: BanknotesIcon },
                             { id: 'summary', label: 'Settlement', icon: UsersIcon },
+                            { id: 'analytics', label: 'Analytics', icon: ChartBarIcon },
                             { id: 'insights', label: 'Trip Guide', icon: SparklesIcon }
                         ].map(tab => (
                             <button
@@ -128,6 +131,8 @@ const Dashboard: React.FC<{ trip: Trip, myId: string, onAddExpense: () => void, 
                     </div>
 
                     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        {activeTab === 'analytics' && <Analytics trip={trip} myId={myId} />}
+
                         {activeTab === 'expenses' && (
                             <div className="space-y-4">
                                 {trip.expenses.length === 0 ? (
