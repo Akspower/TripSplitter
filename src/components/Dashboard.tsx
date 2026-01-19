@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { BanknotesIcon, UsersIcon, SparklesIcon, ArrowRightIcon, ArrowPathIcon, TrashIcon, HandThumbUpIcon, PlusIcon } from '@heroicons/react/24/outline';
 import { calculateDebts } from '../utils/debtCalculator';
-import { getTripInsights } from '../services/geminiService';
+import { getTripInsights } from '../services/groqService';
 import { formatINR } from '../utils/formatters';
 import type { Trip } from '../types';
 
