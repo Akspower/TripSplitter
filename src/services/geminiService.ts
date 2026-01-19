@@ -19,7 +19,7 @@ const generateWithRetry = async (model: any, prompt: string, maxRetries = 3): Pr
         error?.message?.includes('unavailable');
 
       if (isRetryable && attempt < maxRetries) {
-        console.log(`AI retry attempt ${attempt}/${maxRetries}...`);
+        // console.log(`AI retry attempt ${attempt}/${maxRetries}...`);
         await delay(2000 * attempt); // 2s, 4s, 6s
         continue;
       }
@@ -70,7 +70,7 @@ Use emojis. Mention squad members by name. Be specific to ${trip.destination}!
   try {
     return await generateWithRetry(model, prompt);
   } catch (error: any) {
-    console.error("AI Guide Error:", error);
+    // console.error("AI Guide Error:", error);
 
     // Fallback tips for popular destinations
     const fallbackTips = getFallbackTips(trip.destination, trip.tripStyle || 'adventure');

@@ -49,7 +49,7 @@ export const TripService = {
             });
 
         if (tripError) {
-            console.error('Error creating trip:', tripError);
+            // console.error('Error creating trip:', tripError);
             return { success: false, error: tripError.message };
         }
 
@@ -64,7 +64,7 @@ export const TripService = {
 
         const { error: memberError } = await supabase.from('members').insert(membersToInsert);
         if (memberError) {
-            console.error('Error creating members:', memberError);
+            // console.error('Error creating members:', memberError);
             // Try to cleanup trip if member insert fails
             await supabase.from('trips').delete().eq('id', trip.id);
             return { success: false, error: memberError.message };
@@ -82,7 +82,7 @@ export const TripService = {
             .single();
 
         if (tripError || !tripData) {
-            console.error('Trip not found or error:', tripError);
+            // console.error('Trip not found or error:', tripError);
             return { success: false };
         }
 
@@ -97,7 +97,7 @@ export const TripService = {
             });
 
         if (memberError) {
-            console.error('Error adding member:', memberError);
+            // console.error('Error adding member:', memberError);
             return { success: false };
         }
 
@@ -149,7 +149,7 @@ export const TripService = {
         });
 
         if (error) {
-            console.error('Error adding expense:', error);
+            // console.error('Error adding expense:', error);
             return { success: false, error: error.message };
         }
         return { success: true };
@@ -158,7 +158,7 @@ export const TripService = {
     async deleteExpense(expenseId: string): Promise<boolean> {
         const { error } = await supabase.from('expenses').delete().eq('id', expenseId);
         if (error) {
-            console.error(error);
+            // console.error(error);
             return false;
         }
         return true;
@@ -167,7 +167,7 @@ export const TripService = {
     async deleteTrip(tripId: string): Promise<boolean> {
         const { error } = await supabase.from('trips').delete().eq('id', tripId);
         if (error) {
-            console.error('Error deleting trip:', error);
+            // console.error('Error deleting trip:', error);
             return false;
         }
         return true;

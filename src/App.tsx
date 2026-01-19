@@ -33,7 +33,7 @@ export default function App() {
   // Real-time Subscription
   useEffect(() => {
     if (currentTrip?.id) {
-      console.log("Subscribing to trip:", currentTrip.id);
+      // console.log("Subscribing to trip:", currentTrip.id);
       const unsubscribe = TripService.subscribeToTrip(currentTrip.id, () => {
         setIsSyncing(true);
         // Add small delay to show sync indicator

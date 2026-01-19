@@ -1,5 +1,5 @@
-import React from 'react';
-import { CurrencyRupeeIcon, MapPinIcon, TrashIcon, CalendarDaysIcon } from '@heroicons/react/24/outline';
+import React, { useState } from 'react';
+import { CurrencyRupeeIcon, MapPinIcon, TrashIcon, CalendarDaysIcon, ArrowLeftOnRectangleIcon } from '@heroicons/react/24/outline';
 
 interface HeaderProps {
     tripName?: string;
@@ -20,48 +20,91 @@ const formatDateRange = (start?: string, end?: string) => {
     return `${s.toLocaleDateString('en-IN', opts)} - ${e.toLocaleDateString('en-IN', { ...opts, year: 'numeric' })}`;
 };
 
-const Header: React.FC<HeaderProps> = ({ tripName, destination, startDate, endDate, onReset, onDelete, isSyncing, isCreator }) => (
-    <header className="sticky top-0 z-50 glass border-b border-slate-200/50 px-4 md:px-6 py-4 flex justify-between items-center bg-white/80 backdrop-blur-md">
-        <div className="flex items-center gap-3">
-            <div className="bg-slate-900 p-2.5 rounded-2xl shadow-xl transition-all duration-500">
-                <CurrencyRupeeIcon className="w-6 h-6 text-white" />
-            </div>
-            <div>
-                <h1 className="text-xl font-black text-slate-900 tracking-tight hidden sm:block">SplitWay</h1>
-                <div className="flex items-center gap-1.5">
-                    <div className={`w-2 h-2 rounded-full sync-dot ${isSyncing ? 'bg-orange-400' : 'bg-emerald-500'}`}></div>
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                        {isSyncing ? 'Syncing...' : 'Realtime Hub'}
-                    </span>
-                </div>
-            </div>
-        </div>
+const Header: React.FC<HeaderProps> = ({ tripName, destination, startDate, endDate, onReset, onDelete, isSyncing, isCreator }) => {
+    const [showExitConfirm, setShowExitConfirm] = useState(false);
 
-        <div className="flex items-center gap-2 sm:gap-3">
-            {/* Trip Name & Destination */}
-            {tripName && (
-                <div className="text-[10px] font-black bg-indigo-50 text-indigo-600 px-3 sm:px-4 py-2 rounded-full border border-indigo-100 flex items-center gap-2 uppercase tracking-widest max-w-[120px] sm:max-w-[180px] truncate">
-                    <MapPinIcon className="w-3.5 h-3.5 shrink-0" />
-                    <span className="truncate">{destination || tripName}</span>
+    return (
+        <>
+            {/* Exit Confirmation Modal */}
+            {showExitConfirm && (
+                <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+                    <div className="bg-white w-full max-w-sm rounded-[32px] p-6 shadow-2xl scale-100 animate-in zoom-in-95 duration-200">
+                        <div className="text-center space-y-4">
+                            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                                <ArrowLeftOnRectangleIcon className="w-8 h-8 text-slate-500" />
+                            </div>
+                            <h3 className="text-2xl font-black text-slate-900 tracking-tight">Leave Trip?</h3>
+                            <p className="text-slate-500 font-medium leading-relaxed">
+                                You can rejoin later using the Room ID. Your expenses will be saved safely!
+                            </p>
+                            <div className="grid grid-cols-2 gap-3 pt-4">
+                                <button
+                                    onClick={() => setShowExitConfirm(false)}
+                                    className="py-4 rounded-2xl font-bold text-slate-500 hover:bg-slate-50 transition-colors"
+                                >
+                                    Stay
+                                </button>
+                                <button
+                                    onClick={onReset}
+                                    className="py-4 rounded-2xl font-black bg-rose-500 text-white shadow-lg shadow-rose-200 hover:bg-rose-600 transition-colors"
+                                >
+                                    Exit Trip
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             )}
-            {/* Dates */}
-            {startDate && endDate && (
-                <div className="hidden md:flex text-[10px] font-black bg-emerald-50 text-emerald-600 px-4 py-2 rounded-full border border-emerald-100 items-center gap-2 uppercase tracking-widest">
-                    <CalendarDaysIcon className="w-3.5 h-3.5 shrink-0" />
-                    <span>{formatDateRange(startDate, endDate)}</span>
+
+            <header className="sticky top-0 z-50 glass border-b border-slate-200/50 px-3 md:px-6 py-3 flex justify-between items-center bg-white/80 backdrop-blur-md">
+                <div className="flex items-center gap-2 md:gap-3 overflow-hidden">
+                    <div className="bg-slate-900 p-2 rounded-xl md:rounded-2xl shadow-lg shrink-0">
+                        <CurrencyRupeeIcon className="w-5 h-5 md:w-6 md:h-6 text-white" />
+                    </div>
+                    <div className="min-w-0">
+                        <h1 className="text-lg md:text-xl font-black text-slate-900 tracking-tight truncate hidden xs:block">SplitWay</h1>
+                        <div className="flex items-center gap-1.5">
+                            <div className={`w-1.5 h-1.5 md:w-2 md:h-2 rounded-full sync-dot ${isSyncing ? 'bg-orange-400' : 'bg-emerald-500'}`}></div>
+                            <span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest truncate">
+                                {isSyncing ? 'Syncing...' : 'Realtime'}
+                            </span>
+                        </div>
+                    </div>
                 </div>
-            )}
-            <button onClick={onReset} className="p-2 text-slate-400 hover:text-slate-900 font-bold text-xs uppercase tracking-widest">
-                Exit
-            </button>
-            {isCreator && onDelete && (
-                <button onClick={onDelete} className="p-2 text-rose-300 hover:text-rose-600 font-bold transition-colors" title="Delete Trip">
-                    <TrashIcon className="w-5 h-5" />
-                </button>
-            )}
-        </div>
-    </header>
-);
+
+                <div className="flex items-center gap-2 shrink-0">
+                    {/* Responsive Trip Info Pill */}
+                    {(destination || tripName) && (
+                        <div className="flex flex-col items-end mr-1">
+                            <div className="text-[10px] font-black bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-full border border-indigo-100 flex items-center gap-1.5 uppercase tracking-widest max-w-[140px] truncate">
+                                <MapPinIcon className="w-3 h-3 shrink-0" />
+                                <span className="truncate">{destination || tripName}</span>
+                            </div>
+                            {startDate && endDate && (
+                                <div className="text-[9px] font-bold text-slate-400 mt-1 flex items-center gap-1 px-1">
+                                    <CalendarDaysIcon className="w-3 h-3" />
+                                    <span>{formatDateRange(startDate, endDate)}</span>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    <button
+                        onClick={() => setShowExitConfirm(true)}
+                        className="p-2 text-slate-400 hover:text-slate-900 font-bold text-[10px] md:text-xs uppercase tracking-widest bg-slate-50 rounded-lg md:bg-transparent md:p-2"
+                    >
+                        Exit
+                    </button>
+
+                    {isCreator && onDelete && (
+                        <button onClick={onDelete} className="p-2 text-rose-300 hover:text-rose-600 font-bold transition-colors" title="Delete Trip">
+                            <TrashIcon className="w-5 h-5" />
+                        </button>
+                    )}
+                </div>
+            </header>
+        </>
+    );
+};
 
 export default Header;
