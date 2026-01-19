@@ -29,7 +29,7 @@ const generateWithRetry = async (prompt: string, maxRetries = 3): Promise<string
                         content: prompt
                     }
                 ],
-                model: "llama3-70b-8192",
+                model: "llama-3.3-70b-versatile",
                 temperature: 0.7,
                 max_tokens: 1024,
             });
@@ -93,7 +93,7 @@ export const getTripInsights = async (trip: Trip) => {
 ${fallbackTips}
 
 ---
-_AI Buddy is taking a nap. Refresh to try again!_
+_AI service unavailable. Showing offline tips._
         `;
     }
 };
