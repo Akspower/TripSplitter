@@ -32,7 +32,8 @@ const generateWithRetry = async (model: any, prompt: string, maxRetries = 3): Pr
 export const getTripInsights = async (trip: Trip) => {
   if (!genAI) return "⚠️ AI Guide is not configured. Contact the trip admin!";
 
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+  // Using Gemini 1.5 Flash for better stability on free tier
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
   // Calculate date info for seasonal awareness
   const startDate = new Date(trip.startDate);
