@@ -1,11 +1,12 @@
 export type ExpenseCategory =
-  | 'Food' | 'Drink' | 'Rickshaw' | 'Railway' | 'Flight'
-  | 'Stay' | 'Water' | 'Entry Fee' | 'Shopping' | 'Other';
+  | 'Food' | 'Drink' | 'Cab/Taxi' | 'Train/Bus/Flight'
+  | 'Hotel/Stay' | 'Entry Fee' | 'Shopping' | 'Trekking Gear' | 'Alcohol' | 'Other';
 
 export interface Member {
   id: string;
   name: string;
   isCreator: boolean;
+  avatarColor?: string;
 }
 
 export interface Expense {
@@ -19,6 +20,10 @@ export interface Expense {
   createdBy?: string;
 }
 
+export type TripStyle = 'adventure' | 'relaxed' | 'budget' | 'luxury';
+export type BudgetType = 'backpacker' | 'moderate' | 'splurge';
+export type AgeGroup = 'youth' | 'mixed' | 'family' | 'seniors';
+
 export interface Trip {
   id: string;
   name: string;
@@ -28,6 +33,10 @@ export interface Trip {
   members: Member[];
   expenses: Expense[];
   creatorId: string;
+  adminPin?: string;
+  tripStyle?: TripStyle;
+  budgetType?: BudgetType;
+  ageGroup?: AgeGroup;
 }
 
 // --- THIS IS THE MISSING PART CAUSING THE CRASH ---

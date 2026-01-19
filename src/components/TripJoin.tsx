@@ -9,6 +9,9 @@ const TripJoin: React.FC<{ onJoin: (trip: Trip, myId: string) => void, onBack: (
     const [error, setError] = useState('');
     const [isJoining, setIsJoining] = useState(false);
     const [foundTrip, setFoundTrip] = useState<Trip | null>(null);
+    const [pinEntry, setPinEntry] = useState('');
+    const [showPinModal, setShowPinModal] = useState(false);
+    const [pendingMemberId, setPendingMemberId] = useState<string | null>(null);
 
     const fetchTripMembers = async () => {
         setIsJoining(true);
@@ -25,8 +28,27 @@ const TripJoin: React.FC<{ onJoin: (trip: Trip, myId: string) => void, onBack: (
     };
 
     const claimMember = (memberId: string) => {
-        if (foundTrip) {
+        if (!foundTrip) return;
+
+        const member = foundTrip.members.find(m => m.id === memberId);
+        if (member?.isCreator && foundTrip.adminPin) {
+            setPendingMemberId(memberId);
+            setShowPinModal(true);
+            setPinEntry('');
+            setError('');
+        } else {
             onJoin(foundTrip, memberId);
+        }
+    };
+
+    const verifyPinAndJoin = () => {
+        if (!foundTrip || !pendingMemberId) return;
+
+        if (pinEntry === foundTrip.adminPin) {
+            onJoin(foundTrip, pendingMemberId);
+        } else {
+            setError('Incorrect Admin PIN');
+            setPinEntry('');
         }
     };
 
@@ -80,7 +102,31 @@ const TripJoin: React.FC<{ onJoin: (trip: Trip, myId: string) => void, onBack: (
             )}
 
             {step === 2 && foundTrip && (
-                <div className="space-y-6 animate-in fade-in slide-in-from-right-8">
+                <div className="space-y-6 animate-in fade-in slide-in-from-right-8 relative">
+                    {showPinModal && (
+                        <div className="absolute inset-0 z-50 bg-white/95 backdrop-blur-sm rounded-[32px] flex flex-col items-center justify-center p-6 animate-in fade-in zoom-in-95 duration-300">
+                            <h3 className="text-2xl font-black text-slate-900 mb-2">Admin Security</h3>
+                            <p className="text-slate-500 text-sm mb-6 text-center font-bold">Enter 4-digit PIN to access this profile</p>
+
+                            <input
+                                autoFocus
+                                type="password"
+                                maxLength={4}
+                                className="w-48 bg-slate-100 border-none rounded-2xl px-6 py-4 focus:ring-2 focus:ring-indigo-500 outline-none font-black text-3xl text-center tracking-[0.5em] mb-6"
+                                placeholder="••••"
+                                value={pinEntry}
+                                onChange={(e) => { setPinEntry(e.target.value.replace(/\D/g, '').slice(0, 4)); setError(''); }}
+                            />
+
+                            {error && <p className="text-rose-500 font-bold text-sm mb-4 animate-pulse">{error}</p>}
+
+                            <div className="flex gap-3 w-full">
+                                <button onClick={() => setShowPinModal(false)} className="flex-1 py-4 rounded-xl font-bold text-slate-400 hover:bg-slate-50">Cancel</button>
+                                <button onClick={verifyPinAndJoin} className="flex-[2] bg-indigo-600 text-white py-4 rounded-xl font-black shadow-lg shadow-indigo-200">Unlock</button>
+                            </div>
+                        </div>
+                    )}
+
                     <h2 className="text-3xl font-black text-slate-900 tracking-tight">Who are you?</h2>
                     <p className="text-slate-500 font-medium">Select your name if added by the host, or create new.</p>
 
@@ -89,10 +135,15 @@ const TripJoin: React.FC<{ onJoin: (trip: Trip, myId: string) => void, onBack: (
                             <button
                                 key={m.id}
                                 onClick={() => claimMember(m.id)}
-                                className="flex items-center gap-4 bg-white p-5 rounded-[24px] border border-slate-50 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all text-left"
+                                className={`flex items-center gap-4 bg-white p-5 rounded-[24px] border border-slate-50 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all text-left ${m.isCreator ? 'ring-2 ring-amber-100 bg-amber-50/30' : ''}`}
                             >
-                                <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center font-black text-indigo-600">{m.name.charAt(0)}</div>
-                                <span className="font-bold text-slate-700 text-lg">{m.name}</span>
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black ${m.isCreator ? 'bg-amber-100 text-amber-600' : 'bg-indigo-50 text-indigo-600'}`}>
+                                    {m.isCreator ? '👑' : m.name.charAt(0)}
+                                </div>
+                                <div>
+                                    <span className="font-bold text-slate-700 text-lg block">{m.name}</span>
+                                    {m.isCreator && <span className="text-[10px] uppercase tracking-widest font-black text-amber-500">Trip Admin</span>}
+                                </div>
                             </button>
                         ))}
                     </div>

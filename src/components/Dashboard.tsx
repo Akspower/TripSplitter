@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { BanknotesIcon, UsersIcon, SparklesIcon, ArrowRightIcon, ArrowPathIcon, TrashIcon, HandThumbUpIcon, PlusIcon } from '@heroicons/react/24/outline';
 import { calculateDebts } from '../utils/debtCalculator';
 import { getTripInsights } from '../services/geminiService';
@@ -9,6 +9,7 @@ const Dashboard: React.FC<{ trip: Trip, myId: string, onAddExpense: () => void, 
     const [activeTab, setActiveTab] = useState<'expenses' | 'summary' | 'insights'>('expenses');
     const [insights, setInsights] = useState<string | null>(null);
     const [loadingInsights, setLoadingInsights] = useState(false);
+    const prevExpenseCount = useRef(trip.expenses.length);
 
     // --- Core Personal Budget Logic ---
     const tripTotal = useMemo(() => trip.expenses.reduce((sum, e) => sum + e.amount, 0), [trip]);
@@ -33,8 +34,8 @@ const Dashboard: React.FC<{ trip: Trip, myId: string, onAddExpense: () => void, 
 
     const debts = useMemo(() => calculateDebts(trip), [trip]);
 
-    const fetchInsights = useCallback(async () => {
-        if (insights) return;
+    const fetchInsights = useCallback(async (force = false) => {
+        if (insights && !force) return;
         setLoadingInsights(true);
         try {
             const data = await getTripInsights(trip);
@@ -45,14 +46,24 @@ const Dashboard: React.FC<{ trip: Trip, myId: string, onAddExpense: () => void, 
         } finally {
             setLoadingInsights(false);
         }
-    }, [trip, insights]);
+    }, [trip]);
 
-    // Fix: Clean useEffect without setting state synchronously in way that loops
+    // Fetch on tab open
     useEffect(() => {
         if (activeTab === 'insights' && !insights) {
             fetchInsights();
         }
     }, [activeTab]);
+
+    // Auto-refresh insights when expenses change (but only if insights tab was viewed)
+    useEffect(() => {
+        if (trip.expenses.length !== prevExpenseCount.current && insights) {
+            prevExpenseCount.current = trip.expenses.length;
+            // Delay refresh to let UI settle
+            const timer = setTimeout(() => fetchInsights(true), 1000);
+            return () => clearTimeout(timer);
+        }
+    }, [trip.expenses.length]);
 
     return (
         <div className="pb-40 px-4 md:px-6 pt-10 max-w-7xl mx-auto w-full overflow-hidden">
@@ -103,7 +114,7 @@ const Dashboard: React.FC<{ trip: Trip, myId: string, onAddExpense: () => void, 
                         {[
                             { id: 'expenses', label: 'Expenses', icon: BanknotesIcon },
                             { id: 'summary', label: 'Settlement', icon: UsersIcon },
-                            { id: 'insights', label: 'AI Coach', icon: SparklesIcon }
+                            { id: 'insights', label: 'Trip Guide', icon: SparklesIcon }
                         ].map(tab => (
                             <button
                                 key={tab.id}
@@ -134,13 +145,16 @@ const Dashboard: React.FC<{ trip: Trip, myId: string, onAddExpense: () => void, 
                                                 <div className="w-16 h-16 bg-slate-50 rounded-[28px] flex items-center justify-center text-3xl shadow-inner group-hover:bg-indigo-50 transition-colors shrink-0">
                                                     {e.category === 'Food' && '🍛'}
                                                     {e.category === 'Drink' && '🥤'}
-                                                    {e.category === 'Rickshaw' && '🛺'}
-                                                    {e.category === 'Stay' && '🏡'}
-                                                    {e.category === 'Water' && '💧'}
+                                                    {e.category === 'Alcohol' && '🍺'}
+                                                    {e.category === 'Cab/Taxi' && '🚕'}
+                                                    {e.category === 'Train/Bus/Flight' && '✈️'}
+                                                    {e.category === 'Hotel/Stay' && '🏨'}
+                                                    {e.category === 'Trekking Gear' && '🥾'}
+                                                    {e.category === 'Entry Fee' && '🎟️'}
                                                     {e.category === 'Shopping' && '🛍️'}
                                                     {e.category === 'Other' && '📍'}
-                                                    {/* Fallback if category didn't match */}
-                                                    {!['Food', 'Drink', 'Rickshaw', 'Stay', 'Water', 'Shopping', 'Other'].includes(e.category) && '🧾'}
+                                                    {/* Fallback */}
+                                                    {!['Food', 'Drink', 'Alcohol', 'Cab/Taxi', 'Train/Bus/Flight', 'Hotel/Stay', 'Trekking Gear', 'Entry Fee', 'Shopping', 'Other'].includes(e.category) && '🧾'}
                                                 </div>
                                                 <div>
                                                     <h4 className="font-black text-slate-900 text-lg tracking-tight leading-none mb-1 break-words line-clamp-2">{e.description}</h4>
@@ -227,21 +241,35 @@ const Dashboard: React.FC<{ trip: Trip, myId: string, onAddExpense: () => void, 
                                 <SparklesIcon className="absolute -right-10 -top-10 w-64 h-64 text-indigo-500/10 rotate-12" />
                                 <div className="flex items-center justify-between mb-12 relative z-10">
                                     <div>
-                                        <h3 className="text-3xl font-black flex items-center gap-4">AI Travel Coach</h3>
-                                        <p className="text-indigo-400 text-[10px] font-black uppercase tracking-[0.3em] mt-2">Smart Analysis for India Trips</p>
+                                        <h3 className="text-3xl font-black flex items-center gap-4">AI Trip Guide</h3>
+                                        <p className="text-indigo-400 text-[10px] font-black uppercase tracking-[0.3em] mt-2">Smart Analysis & Local Hacks</p>
                                     </div>
                                     <button onClick={() => { setInsights(null); fetchInsights(); }} className="bg-white/10 p-4 rounded-3xl hover:bg-white/20 transition-all active:rotate-180 duration-500">
                                         <ArrowPathIcon className={`w-8 h-8 ${loadingInsights ? 'animate-spin' : ''}`} />
                                     </button>
                                 </div>
                                 {loadingInsights ? (
-                                    <div className="py-24 text-center relative z-10">
-                                        <div className="w-20 h-20 border-4 border-slate-700 border-t-indigo-400 rounded-full animate-spin mx-auto mb-8 shadow-2xl shadow-indigo-500/20"></div>
-                                        <p className="animate-pulse font-black text-2xl text-indigo-200 tracking-tight">Crafting Your Strategy...</p>
-                                        <p className="text-slate-500 text-sm mt-4 font-bold">Simulating budgets and travel hacks</p>
+                                    <div className="py-12 px-2 sm:px-6 relative z-10 space-y-6">
+                                        <div className="h-8 w-3/4 animate-shimmer rounded-xl"></div>
+                                        <div className="space-y-3">
+                                            <div className="h-4 w-full animate-shimmer rounded-lg"></div>
+                                            <div className="h-4 w-5/6 animate-shimmer rounded-lg"></div>
+                                            <div className="h-4 w-4/6 animate-shimmer rounded-lg"></div>
+                                        </div>
+
+                                        <div className="pt-4 flex gap-4">
+                                            <div className="h-24 w-1/3 animate-shimmer rounded-2xl"></div>
+                                            <div className="h-24 w-1/3 animate-shimmer rounded-2xl"></div>
+                                            <div className="h-24 w-1/3 animate-shimmer rounded-2xl"></div>
+                                        </div>
+
+                                        <div className="text-center pt-8">
+                                            <p className="animate-pulse font-black text-xl text-indigo-200 tracking-tight">Crafting Your Strategy...</p>
+                                            <p className="text-slate-500 text-xs sm:text-sm mt-2 font-bold uppercase tracking-widest">Parsing {trip.expenses.length} expenses & finding hacks</p>
+                                        </div>
                                     </div>
                                 ) : (
-                                    <div className="prose prose-invert max-w-none text-indigo-50/80 italic leading-relaxed whitespace-pre-line text-xl font-medium relative z-10">
+                                    <div className="prose prose-invert max-w-none text-indigo-50/80 italic leading-relaxed whitespace-pre-line text-lg sm:text-xl font-medium relative z-10 animate-in fade-in duration-700 slide-in-from-bottom-4">
                                         {insights || "Tap the refresh icon and Gemini will tell you who's spending too much and give you secret local hacks for your destination!"}
                                     </div>
                                 )}

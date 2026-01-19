@@ -9,10 +9,15 @@ const mapTripFromDb = (tripData: any, members: any[], expenses: any[]): Trip => 
     startDate: tripData.start_date,
     endDate: tripData.end_date,
     creatorId: tripData.creator_id,
-    members: members.map(m => ({
+    adminPin: tripData.admin_pin,
+    tripStyle: tripData.trip_style,
+    budgetType: tripData.budget_type,
+    ageGroup: tripData.age_group,
+    members: members.map((m, idx) => ({
         id: m.user_id,
         name: m.name,
-        isCreator: m.is_creator
+        isCreator: m.is_creator,
+        avatarColor: m.avatar_color || `color-${idx}`
     })),
     expenses: expenses.map(e => ({
         id: e.id,
@@ -36,7 +41,11 @@ export const TripService = {
                 destination: trip.destination,
                 start_date: trip.startDate,
                 end_date: trip.endDate,
-                creator_id: trip.creatorId
+                creator_id: trip.creatorId,
+                admin_pin: trip.adminPin,
+                trip_style: trip.tripStyle,
+                budget_type: trip.budgetType,
+                age_group: trip.ageGroup
             });
 
         if (tripError) {
@@ -44,12 +53,13 @@ export const TripService = {
             return { success: false, error: tripError.message };
         }
 
-        // Insert members
-        const membersToInsert = trip.members.map(m => ({
+        // Insert members with avatar colors
+        const membersToInsert = trip.members.map((m, idx) => ({
             trip_id: trip.id,
             user_id: m.id,
             name: m.name,
-            is_creator: m.isCreator
+            is_creator: m.isCreator,
+            avatar_color: m.avatarColor || `color-${idx}`
         }));
 
         const { error: memberError } = await supabase.from('members').insert(membersToInsert);

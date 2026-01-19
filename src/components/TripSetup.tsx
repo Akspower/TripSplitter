@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { IdentificationIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { IdentificationIcon, PlusIcon, TrashIcon, LockClosedIcon, SparklesIcon } from '@heroicons/react/24/outline';
 import { TripService } from '../services/tripService';
-import type { Trip, Member } from '../types';
+import type { Trip, Member, TripStyle, BudgetType, AgeGroup } from '../types';
+import { getAvatarColor } from './MemberAvatar';
 
 const TripSetup: React.FC<{ onComplete: (trip: Trip, myId: string) => void }> = ({ onComplete }) => {
     const [step, setStep] = useState(1);
@@ -10,6 +11,12 @@ const TripSetup: React.FC<{ onComplete: (trip: Trip, myId: string) => void }> = 
     const [members, setMembers] = useState<{ id: string, name: string }[]>([]);
     const [newMember, setNewMember] = useState('');
     const [isCreating, setIsCreating] = useState(false);
+
+    // V3: Security & Profile
+    const [adminPin, setAdminPin] = useState('');
+    const [tripStyle, setTripStyle] = useState<TripStyle>('adventure');
+    const [budgetType, setBudgetType] = useState<BudgetType>('moderate');
+    const [ageGroup, setAgeGroup] = useState<AgeGroup>('mixed');
 
     const addMember = () => {
         if (newMember.trim()) {
@@ -25,8 +32,8 @@ const TripSetup: React.FC<{ onComplete: (trip: Trip, myId: string) => void }> = 
         const tripId = Math.floor(100000 + Math.random() * 900000).toString();
 
         const allMembers: Member[] = [
-            { id: creatorId, name: creatorName, isCreator: true },
-            ...members.map(m => ({ id: m.id, name: m.name, isCreator: false }))
+            { id: creatorId, name: creatorName, isCreator: true, avatarColor: getAvatarColor(0) },
+            ...members.map((m, idx) => ({ id: m.id, name: m.name, isCreator: false, avatarColor: getAvatarColor(idx + 1) }))
         ];
 
         const newTrip: Trip = {
@@ -34,7 +41,11 @@ const TripSetup: React.FC<{ onComplete: (trip: Trip, myId: string) => void }> = 
             ...formData,
             members: allMembers,
             expenses: [],
-            creatorId
+            creatorId,
+            adminPin: adminPin || undefined,
+            tripStyle,
+            budgetType,
+            ageGroup
         };
 
         const result = await TripService.createTrip(newTrip);
@@ -50,7 +61,7 @@ const TripSetup: React.FC<{ onComplete: (trip: Trip, myId: string) => void }> = 
     return (
         <div className="max-w-md mx-auto p-4 sm:p-8 mt-6 w-full">
             <div className="flex justify-between gap-4 mb-16">
-                {[1, 2, 3].map((s) => (
+                {[1, 2, 3, 4].map((s) => (
                     <div key={s} className={`h-1.5 rounded-full flex-1 transition-all duration-700 ${step >= s ? 'bg-slate-900 shadow-lg' : 'bg-slate-200'}`} />
                 ))}
             </div>
@@ -155,11 +166,85 @@ const TripSetup: React.FC<{ onComplete: (trip: Trip, myId: string) => void }> = 
                     <div className="flex gap-4 pt-6">
                         <button onClick={() => setStep(2)} className="flex-1 bg-slate-100 text-slate-500 py-6 rounded-[24px] font-bold">Back</button>
                         <button
+                            onClick={() => setStep(4)}
+                            className="flex-[2] bg-slate-900 text-white py-6 rounded-[24px] font-black text-xl shadow-2xl"
+                        >
+                            Trip Settings
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {step === 4 && (
+                <div className="space-y-6 animate-in fade-in slide-in-from-right-8">
+                    <div className="flex items-center gap-3 mb-2">
+                        <SparklesIcon className="w-8 h-8 text-indigo-500" />
+                        <h2 className="text-3xl font-black text-slate-900 tracking-tight">Trip Profile</h2>
+                    </div>
+                    <p className="text-slate-500 text-sm font-medium">Help our AI Guide give you better suggestions!</p>
+
+                    {/* Trip Style */}
+                    <div className="bg-white p-6 rounded-[28px] shadow-xl border border-slate-50">
+                        <label className="block text-[10px] font-black text-slate-400 uppercase mb-3 tracking-widest">Trip Vibe</label>
+                        <div className="grid grid-cols-2 gap-3">
+                            {[{ v: 'adventure', l: '🏔️ Adventure', d: 'Thrills & Explore' }, { v: 'relaxed', l: '🏖️ Relaxed', d: 'Chill & Unwind' }, { v: 'budget', l: '💰 Budget', d: 'Max Value' }, { v: 'luxury', l: '✨ Luxury', d: 'Premium Experience' }].map(opt => (
+                                <button key={opt.v} onClick={() => setTripStyle(opt.v as TripStyle)} className={`p-4 rounded-2xl text-left transition-all ${tripStyle === opt.v ? 'bg-indigo-600 text-white shadow-lg scale-[1.02]' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>
+                                    <span className="font-black text-sm">{opt.l}</span>
+                                    <span className="block text-[10px] opacity-70">{opt.d}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Budget Type */}
+                    <div className="bg-white p-6 rounded-[28px] shadow-xl border border-slate-50">
+                        <label className="block text-[10px] font-black text-slate-400 uppercase mb-3 tracking-widest">Budget Style</label>
+                        <div className="flex gap-3">
+                            {[{ v: 'backpacker', l: '🎒 Backpacker' }, { v: 'moderate', l: '⚖️ Moderate' }, { v: 'splurge', l: '💎 Splurge' }].map(opt => (
+                                <button key={opt.v} onClick={() => setBudgetType(opt.v as BudgetType)} className={`flex-1 py-4 px-3 rounded-2xl font-black text-sm transition-all ${budgetType === opt.v ? 'bg-emerald-500 text-white shadow-lg' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>
+                                    {opt.l}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Age Group */}
+                    <div className="bg-white p-6 rounded-[28px] shadow-xl border border-slate-50">
+                        <label className="block text-[10px] font-black text-slate-400 uppercase mb-3 tracking-widest">Squad Type</label>
+                        <div className="flex gap-3">
+                            {[{ v: 'youth', l: '🎉 Youth' }, { v: 'mixed', l: '👥 Mixed' }, { v: 'family', l: '👨‍👩‍👧 Family' }, { v: 'seniors', l: '🌅 Seniors' }].map(opt => (
+                                <button key={opt.v} onClick={() => setAgeGroup(opt.v as AgeGroup)} className={`flex-1 py-4 px-2 rounded-2xl font-black text-xs transition-all ${ageGroup === opt.v ? 'bg-amber-500 text-white shadow-lg' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>
+                                    {opt.l}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Admin PIN */}
+                    <div className="bg-slate-900 p-6 rounded-[28px] shadow-xl">
+                        <div className="flex items-center gap-3 mb-3">
+                            <LockClosedIcon className="w-5 h-5 text-indigo-400" />
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Admin PIN (Optional)</label>
+                        </div>
+                        <input
+                            type="password"
+                            maxLength={4}
+                            className="w-full bg-slate-800 border-none rounded-2xl px-6 py-4 focus:ring-2 focus:ring-indigo-500 outline-none font-black text-2xl text-white text-center tracking-[0.5em]"
+                            placeholder="••••"
+                            value={adminPin}
+                            onChange={(e) => setAdminPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                        />
+                        <p className="text-slate-500 text-xs mt-2 text-center">4-digit PIN to protect trip deletion</p>
+                    </div>
+
+                    <div className="flex gap-4 pt-4">
+                        <button onClick={() => setStep(3)} className="flex-1 bg-slate-100 text-slate-500 py-6 rounded-[24px] font-bold">Back</button>
+                        <button
                             disabled={isCreating}
                             onClick={finishSetup}
                             className="flex-[2] bg-indigo-600 text-white py-6 rounded-[24px] font-black text-xl shadow-2xl disabled:opacity-70 disabled:animate-pulse"
                         >
-                            {isCreating ? 'Creating...' : 'Start Adventure'}
+                            {isCreating ? 'Creating...' : '🚀 Launch Trip'}
                         </button>
                     </div>
                 </div>

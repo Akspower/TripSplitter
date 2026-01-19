@@ -1,62 +1,117 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SplitWay Pro - Smart India Trip Splitter</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <style>
-      :root {
-        --depth-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.1);
-        --neo-surface: #f8fafc;
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+
+  <!-- PWA Meta Tags -->
+  <meta name="theme-color" content="#4F46E5" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="SplitWay" />
+  <meta name="description" content="Smart expense splitting for India trips with AI-powered insights" />
+
+  <!-- Icons -->
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="manifest" href="/manifest.json" />
+
+  <title>SplitWay Pro - Smart India Trip Splitter</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --depth-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.1);
+      --neo-surface: #f8fafc;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: var(--neo-surface);
+      color: #0f172a;
+      overflow-x: hidden;
+    }
+
+    .glass {
+      background: rgba(255, 255, 255, 0.75);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+
+    .card-3d {
+      transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s ease;
+      transform: perspective(1000px) rotateX(0deg);
+    }
+
+    .card-3d:active {
+      transform: perspective(1000px) scale(0.98);
+    }
+
+    .floating-dock {
+      box-shadow: 0 -10px 40px -10px rgba(0, 0, 0, 0.1);
+    }
+
+    @keyframes pulse-sync {
+
+      0%,
+      100% {
+        opacity: 1;
+        transform: scale(1);
       }
-      body {
-        font-family: 'Plus Jakarta Sans', sans-serif;
-        background-color: var(--neo-surface);
-        color: #0f172a;
-        overflow-x: hidden;
+
+      50% {
+        opacity: 0.5;
+        transform: scale(0.9);
       }
-      .glass {
-        background: rgba(255, 255, 255, 0.75);
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
+    }
+
+    .sync-dot {
+      animation: pulse-sync 2s infinite;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #e2e8f0;
+      border-radius: 10px;
+    }
+
+    /* Hide scrollbar for Chrome, Safari and Opera */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      /* IE and Edge */
+      scrollbar-width: none;
+      /* Firefox */
+    }
+
+    @keyframes shimmer {
+      0% {
+        background-position: -1000px 0;
       }
-      .card-3d {
-        transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s ease;
-        transform: perspective(1000px) rotateX(0deg);
+
+      100% {
+        background-position: 1000px 0;
       }
-      .card-3d:active {
-        transform: perspective(1000px) scale(0.98);
-      }
-      .floating-dock {
-        box-shadow: 0 -10px 40px -10px rgba(0,0,0,0.1);
-      }
-      @keyframes pulse-sync {
-        0%, 100% { opacity: 1; transform: scale(1); }
-        50% { opacity: 0.5; transform: scale(0.9); }
-      }
-      .sync-dot {
-        animation: pulse-sync 2s infinite;
-      }
-      .custom-scrollbar::-webkit-scrollbar {
-        width: 4px;
-      }
-      .custom-scrollbar::-webkit-scrollbar-thumb {
-        background: #e2e8f0;
-        border-radius: 10px;
-      }
-      /* Hide scrollbar for Chrome, Safari and Opera */
-      .no-scrollbar::-webkit-scrollbar {
-          display: none;
-      }
-      .no-scrollbar {
-          -ms-overflow-style: none;  /* IE and Edge */
-          scrollbar-width: none;  /* Firefox */
-      }
-    </style>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+    }
+
+    .animate-shimmer {
+      animation: shimmer 2s infinite linear;
+      background: linear-gradient(to right, #1e293b 4%, #334155 25%, #1e293b 36%);
+      background-size: 1000px 100%;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+
 </html>

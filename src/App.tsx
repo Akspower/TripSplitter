@@ -99,7 +99,21 @@ export default function App() {
   };
 
   const handleDeleteExpense = async (expenseId: string) => {
-    await TripService.deleteExpense(expenseId);
+    if (!currentTrip) return;
+
+    // Optimistic update - remove immediately from UI
+    const previousExpenses = currentTrip.expenses;
+    setCurrentTrip(prev => prev ? {
+      ...prev,
+      expenses: prev.expenses.filter(e => e.id !== expenseId)
+    } : null);
+
+    const success = await TripService.deleteExpense(expenseId);
+    if (!success) {
+      // Revert on failure
+      setCurrentTrip(prev => prev ? { ...prev, expenses: previousExpenses } : null);
+      alert('Failed to delete expense. Please try again.');
+    }
   };
 
   if (loadingTrip) {
@@ -118,6 +132,9 @@ export default function App() {
       <div className="min-h-screen bg-slate-50 selection:bg-indigo-100 selection:text-indigo-900 font-sans">
         <Header
           tripName={currentTrip.name}
+          destination={currentTrip.destination}
+          startDate={currentTrip.startDate}
+          endDate={currentTrip.endDate}
           onReset={handleReset}
           isSyncing={isSyncing}
           isCreator={currentTrip.creatorId === myId}

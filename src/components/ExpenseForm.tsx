@@ -39,7 +39,7 @@ const ExpenseForm: React.FC<{ members: Member[], onAdd: (e: Expense) => void, on
         }
     };
 
-    const categories: ExpenseCategory[] = ['Food', 'Drink', 'Rickshaw', 'Railway', 'Flight', 'Stay', 'Water', 'Entry Fee', 'Shopping', 'Other'];
+    const categories: ExpenseCategory[] = ['Food', 'Drink', 'Alcohol', 'Cab/Taxi', 'Train/Bus/Flight', 'Hotel/Stay', 'Entry Fee', 'Trekking Gear', 'Shopping', 'Other'];
 
     return (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/70 backdrop-blur-md animate-in fade-in duration-500">
