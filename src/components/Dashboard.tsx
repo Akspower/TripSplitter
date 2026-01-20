@@ -269,6 +269,11 @@ const Dashboard: React.FC<{ trip: Trip, myId: string, onAddExpense: () => void, 
                                                         {((e.splitType === 'EXACT' && (e.splitDetails?.[myId] || 0) > 0) || (e.splitType !== 'EXACT' && e.participantIds.includes(myId))) && (
                                                             <span className="text-[9px] font-black bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full uppercase tracking-widest">In Your share</span>
                                                         )}
+                                                        {e.splitType === 'EXACT' && (
+                                                            <span className="text-[9px] font-black bg-amber-50 text-amber-600 px-3 py-1 rounded-full uppercase tracking-widest flex items-center gap-1">
+                                                                ⚡ Custom Split
+                                                            </span>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>
@@ -276,10 +281,10 @@ const Dashboard: React.FC<{ trip: Trip, myId: string, onAddExpense: () => void, 
                                                 <div className="text-right">
                                                     <span className="block text-2xl font-black text-slate-900">{formatINR(e.amount)}</span>
                                                     {e.participantIds.includes(myId) && (
-                                                        <span className="text-[11px] text-indigo-500 font-black">
+                                                        <span className="text-[11px] text-indigo-500 font-black block mt-1">
                                                             {e.splitType === 'EXACT' && e.splitDetails
-                                                                ? `₹${(e.splitDetails[myId] || 0).toFixed(0)} your share`
-                                                                : `₹${(e.amount / e.participantIds.length).toFixed(0)} each`
+                                                                ? `You pay ₹${(e.splitDetails[myId] || 0).toFixed(0)}`
+                                                                : `₹${(e.amount / e.participantIds.length).toFixed(0)} / person`
                                                             }
                                                         </span>
                                                     )}

@@ -50,9 +50,14 @@ const Analytics: React.FC<AnalyticsProps> = ({ trip, myId }) => {
 
     // 3. Key Metrics
     const totalSpent = trip.expenses.reduce((sum, e) => sum + e.amount, 0);
-    const myShare = trip.expenses
-        .filter(e => e.participantIds.includes(myId))
-        .reduce((sum, e) => sum + (e.amount / e.participantIds.length), 0);
+    const myShare = trip.expenses.reduce((sum, e) => {
+        if (e.splitType === 'EXACT' && e.splitDetails) {
+            return sum + (e.splitDetails[myId] || 0);
+        } else if (e.participantIds.includes(myId)) {
+            return sum + (e.amount / e.participantIds.length);
+        }
+        return sum;
+    }, 0);
 
     // Duration Logic
     const startDate = new Date(trip.startDate);
@@ -107,10 +112,18 @@ const Analytics: React.FC<AnalyticsProps> = ({ trip, myId }) => {
                 <div className="bg-indigo-50 p-6 rounded-[32px] border border-indigo-100 shadow-lg sm:col-span-2 lg:col-span-1">
                     <div className="flex items-center gap-3 mb-2 text-indigo-600">
                         <CalendarIcon className="w-5 h-5" />
-                        <span className="text-xs font-black uppercase tracking-widest">Daily Average</span>
+                        <span className="text-xs font-black uppercase tracking-widest">Daily Burn</span>
                     </div>
-                    <h2 className="text-4xl font-black tracking-tight text-slate-900">{formatINR(dailyAvg)}</h2>
-                    <p className="text-slate-400 text-xs font-bold mt-2">For {durationDays} days</p>
+                    <div className="flex justify-between items-end">
+                        <div>
+                            <h2 className="text-3xl font-black tracking-tight text-slate-900">{formatINR(dailyAvg)}</h2>
+                            <p className="text-slate-400 text-[10px] font-bold mt-1 uppercase">Group Avg / Day</p>
+                        </div>
+                        <div className="text-right">
+                            <h2 className="text-xl font-black tracking-tight text-indigo-600">{formatINR(myShare / durationDays)}</h2>
+                            <p className="text-indigo-400 text-[10px] font-bold mt-1 uppercase">Your Avg / Day</p>
+                        </div>
+                    </div>
                 </div>
             </div>
 
