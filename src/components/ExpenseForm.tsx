@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { PlusIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import type { Member, Expense, ExpenseCategory } from '../types';
+import toast from 'react-hot-toast';
 
 const ExpenseForm: React.FC<{ members: Member[], onAdd: (e: Expense) => void, onCancel: () => void }> = ({ members, onAdd, onCancel }) => {
     const [desc, setDesc] = useState('');
@@ -38,13 +39,13 @@ const ExpenseForm: React.FC<{ members: Member[], onAdd: (e: Expense) => void, on
 
         if (splitType === 'EXACT') {
             if (Math.abs(currentSplitSum - numAmount) > 0.5) {
-                alert(`Split amount (₹${currentSplitSum}) does not match bill amount (₹${numAmount}). Please fix.`);
+                toast.error(`Split amount (₹${currentSplitSum}) does not match bill amount (₹${numAmount}). Please fix.`);
                 return;
             }
             // Filter participants to only those with > 0 amount
             const involvedIds = Object.keys(splitDetails).filter(id => splitDetails[id] > 0);
             if (involvedIds.length === 0) {
-                alert("Please split the amount among members.");
+                toast.error("Please split the amount among members.");
                 return;
             }
 

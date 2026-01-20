@@ -111,11 +111,34 @@ const TripSetup: React.FC<{ onComplete: (trip: Trip, myId: string) => void }> = 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="bg-white p-6 rounded-[28px] shadow-xl border border-slate-50">
                                 <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 tracking-widest">Start</label>
-                                <input type="date" required className="w-full bg-transparent border-none px-0 py-1 focus:ring-0 outline-none font-bold" value={formData.startDate} onChange={(e) => setFormData({ ...formData, startDate: e.target.value })} />
+                                <input
+                                    type="date"
+                                    required
+                                    className="w-full bg-transparent border-none px-0 py-1 focus:ring-0 outline-none font-bold"
+                                    value={formData.startDate}
+                                    min={new Date().toISOString().split('T')[0]} // Min today
+                                    onChange={(e) => {
+                                        const newStart = e.target.value;
+                                        setFormData(prev => ({
+                                            ...prev,
+                                            startDate: newStart,
+                                            // Reset end date if it's before new start date
+                                            endDate: prev.endDate && prev.endDate < newStart ? '' : prev.endDate
+                                        }))
+                                    }}
+                                />
                             </div>
                             <div className="bg-white p-6 rounded-[28px] shadow-xl border border-slate-50">
                                 <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 tracking-widest">End</label>
-                                <input type="date" required className="w-full bg-transparent border-none px-0 py-1 focus:ring-0 outline-none font-bold" value={formData.endDate} onChange={(e) => setFormData({ ...formData, endDate: e.target.value })} />
+                                <input
+                                    type="date"
+                                    required
+                                    className="w-full bg-transparent border-none px-0 py-1 focus:ring-0 outline-none font-bold"
+                                    value={formData.endDate}
+                                    min={formData.startDate || new Date().toISOString().split('T')[0]} // Min start date or today
+                                    disabled={!formData.startDate}
+                                    onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                                />
                             </div>
                         </div>
                     </div>

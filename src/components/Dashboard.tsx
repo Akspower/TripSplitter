@@ -445,6 +445,24 @@ const Dashboard: React.FC<{ trip: Trip, myId: string, onAddExpense: () => void, 
                             </button>
                         </div>
 
+                        {/* Visible Copy Link Section */}
+                        <div className="mb-6 p-4 bg-indigo-50 rounded-2xl border border-indigo-100 flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                                <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">Invite Friend</p>
+                                <p className="text-xs font-bold text-indigo-900 truncate">Room: {trip.id}</p>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    const link = `${window.location.origin}/?join=${trip.id}`;
+                                    navigator.clipboard.writeText(link);
+                                    toast.success('Invite link copied!');
+                                }}
+                                className="bg-indigo-600 text-white px-3 py-2 rounded-xl text-xs font-black shadow-lg shadow-indigo-200 hover:scale-105 transition-transform shrink-0"
+                            >
+                                Copy Link
+                            </button>
+                        </div>
+
                         <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
                             {optimisticTrip.members.map(m => (
                                 <div key={m.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-[20px] border border-slate-100">
