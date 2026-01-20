@@ -22,7 +22,7 @@ const formatDateRange = (start?: string, end?: string) => {
     return `${s.toLocaleDateString('en-IN', opts)} - ${e.toLocaleDateString('en-IN', { ...opts, year: 'numeric' })}`;
 };
 
-const Header: React.FC<HeaderProps> = ({ tripName, destination, startDate, endDate, onReset, onDelete, isSyncing, isOffline, isCreator }) => {
+const Header: React.FC<HeaderProps> = ({ tripName, destination, startDate, endDate, onReset, onDelete, isSyncing, isOffline, isCreator, tripId }) => {
     const [showExitConfirm, setShowExitConfirm] = useState(false);
 
     return (
@@ -93,31 +93,37 @@ const Header: React.FC<HeaderProps> = ({ tripName, destination, startDate, endDa
 
                     <button
                         onClick={() => {
+                            if (!tripId) return;
+                            const shareUrl = `${window.location.origin}/?join=${tripId}`;
+                            const shareData = {
+                                title: 'Join my trip on SplitWay',
+                                text: `Join ${tripName || 'my trip'} on SplitWay! Room Code: ${tripId}`,
+                                url: shareUrl
+                            };
+
                             if (navigator.share) {
-                                navigator.share({
-                                    title: 'Join my trip on SplitWay',
-                                    text: `Join ${tripName || 'my trip'} on SplitWay!`,
-                                    url: `${window.location.origin}/?join=${window.location.search.split('?')[0]}` // This logic needs to be better, we need the Room ID 
-                                }).catch(console.error);
+                                navigator.share(shareData).catch(console.error);
                             } else {
-                                // Fallback
-                                // We don't have the trip ID here directly in props easily without parsing? 
-                                // Actually Header doesn't have tripID prop. Let's rely on parent passing it or just omit for now and do it properly in Dashboard.
-                                // Wait, the user asked for "Share other person app or directly from there their room id".
-                                // Best place is probably Dashboard or passing Trip ID to Header.
+                                navigator.clipboard.writeText(shareData.text + " " + shareData.url);
+                                alert("Link copied to clipboard!");
                             }
                         }}
-                        className="p-2 text-indigo-400 hover:text-indigo-600 font-bold transition-colors hidden"
-                    //  Hiding for now, will implement properly in Dashboard or pass tripId
+                        className={tripId ? "p-2 text-indigo-400 hover:text-indigo-600 font-bold transition-colors" : "hidden"}
+                        title="Share Trip Invite"
                     >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.287.696.287 1.093s-.107.77-.287 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.935-2.186 2.25 2.25 0 00-3.935 2.186z" />
+                        </svg>
                     </button>
 
-                    <button
-                        onClick={() => setShowExitConfirm(true)}
-                        className="p-2 text-slate-400 hover:text-slate-900 font-bold text-[10px] md:text-xs uppercase tracking-widest bg-slate-50 rounded-lg md:bg-transparent md:p-2"
-                    >
-                        Exit
-                    </button>
+                    {tripId && (
+                        <button
+                            onClick={() => setShowExitConfirm(true)}
+                            className="p-2 text-slate-400 hover:text-slate-900 font-bold text-[10px] md:text-xs uppercase tracking-widest bg-slate-50 rounded-lg md:bg-transparent md:p-2"
+                        >
+                            Exit
+                        </button>
+                    )}
 
                     {isCreator && onDelete && (
                         <button onClick={onDelete} className="p-2 text-rose-300 hover:text-rose-600 font-bold transition-colors" title="Delete Trip">

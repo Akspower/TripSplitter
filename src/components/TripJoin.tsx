@@ -20,6 +20,7 @@ const TripJoin: React.FC<{ onJoin: (trip: Trip, myId: string) => void, onBack: (
     }, [initialTripId]);
 
     const handleFetchTrip = async (id: string) => {
+        if (!id) return;
         setIsJoining(true);
         setError('');
         const result = await TripService.getTrip(id.trim());
@@ -29,6 +30,10 @@ const TripJoin: React.FC<{ onJoin: (trip: Trip, myId: string) => void, onBack: (
             setStep(2);
         } else {
             setError('Trip not found. Check the ID.');
+            if (initialTripId) {
+                // If auto-join failed, clear the ID so user can type manually
+                setTripId('');
+            }
         }
         setIsJoining(false);
     };

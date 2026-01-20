@@ -62,18 +62,30 @@ export default function App() {
     };
   }, []);
 
-  // Initial Load
+  // Initial Load with Cache Strategy
   useEffect(() => {
     const savedTripId = localStorage.getItem('tripId');
     const savedMyId = localStorage.getItem('myId');
-
-    // If we have local data but are offline, we should still try to load view
-    // (In a real PWA context, React Query or local caching would handle this better.
-    // For now we assume TripService might need network, unless we cache trip data too.)
+    const cachedTripJson = localStorage.getItem('cachedTrip');
 
     if (savedTripId && savedMyId) {
       setMyId(savedMyId);
-      loadTrip(savedTripId);
+
+      // 1. Try to load from cache immediately for instant UI
+      if (cachedTripJson) {
+        try {
+          const cachedTrip = JSON.parse(cachedTripJson);
+          if (cachedTrip.id === savedTripId) {
+            setCurrentTrip(cachedTrip);
+            setLoadingTrip(false); // Show UI immediately
+          }
+        } catch (e) {
+          console.error("Failed to parse cached trip", e);
+        }
+      }
+
+      // 2. Fetch fresh data from server
+      loadTrip(savedTripId, !!cachedTripJson); // Silent if we have cache
     } else {
       setLoadingTrip(false);
     }
@@ -97,14 +109,16 @@ export default function App() {
     const result = await TripService.getTrip(id);
     if (result.success && result.trip) {
       setCurrentTrip(result.trip);
-      // Persist ID only
+      // Persist ID and Data
       localStorage.setItem('tripId', id);
+      localStorage.setItem('cachedTrip', JSON.stringify(result.trip));
     } else {
       // If fail to load (e.g. deleted or offline), handle gracefully
       if (isOffline && currentTrip) {
         // Keep current state if offline and already loaded
       } else {
-        // Maybe show error or retry? 
+        // If we have no cache and failed, maybe clear?
+        // But for "refresh" safety, we hopefully loaded cache above.
       }
     }
     setIsSyncing(false);
@@ -120,12 +134,15 @@ export default function App() {
 
   const handleCreateOrJoin = (trip: Trip, id: string) => {
     setCurrentTrip(trip);
+    // update cache immediately
+    localStorage.setItem('cachedTrip', JSON.stringify(trip));
     saveLocalContext(trip.id, id);
   };
 
   const handleReset = () => {
     localStorage.removeItem('tripId');
     localStorage.removeItem('myId');
+    localStorage.removeItem('cachedTrip');
     setCurrentTrip(null);
     setMyId('');
     setViewMode('landing');
