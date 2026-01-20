@@ -56,7 +56,11 @@ const Dashboard: React.FC<{ trip: Trip, myId: string, onAddExpense: () => void, 
 
     const myConsumption = useMemo(() => {
         return optimisticTrip.expenses.reduce((sum, e) => {
-            if (e.participantIds.includes(myId)) {
+            if (e.splitType === 'EXACT' && e.splitDetails) {
+                // Exact Split Logic
+                return sum + (e.splitDetails[myId] || 0);
+            } else if (e.participantIds.includes(myId)) {
+                // Equal Split Logic
                 return sum + (e.amount / e.participantIds.length);
             }
             return sum;
@@ -259,10 +263,10 @@ const Dashboard: React.FC<{ trip: Trip, myId: string, onAddExpense: () => void, 
                                                         <span className={`text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest ${e.payerId === myId ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200' : 'bg-slate-100 text-slate-500'}`}>
                                                             {e.payerId === myId ? 'You Paid' : optimisticTrip.members.find(m => m.id === e.payerId)?.name || 'Unknown'}
                                                         </span>
-                                                        {!e.participantIds.includes(myId) && (
+                                                        {!((e.splitType === 'EXACT' && (e.splitDetails?.[myId] || 0) > 0) || (e.splitType !== 'EXACT' && e.participantIds.includes(myId))) && (
                                                             <span className="text-[9px] font-black bg-rose-50 text-rose-500 px-3 py-1 rounded-full uppercase tracking-widest">Not For You</span>
                                                         )}
-                                                        {e.participantIds.includes(myId) && (
+                                                        {((e.splitType === 'EXACT' && (e.splitDetails?.[myId] || 0) > 0) || (e.splitType !== 'EXACT' && e.participantIds.includes(myId))) && (
                                                             <span className="text-[9px] font-black bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full uppercase tracking-widest">In Your share</span>
                                                         )}
                                                     </div>
@@ -272,7 +276,12 @@ const Dashboard: React.FC<{ trip: Trip, myId: string, onAddExpense: () => void, 
                                                 <div className="text-right">
                                                     <span className="block text-2xl font-black text-slate-900">{formatINR(e.amount)}</span>
                                                     {e.participantIds.includes(myId) && (
-                                                        <span className="text-[11px] text-indigo-500 font-black">₹{(e.amount / e.participantIds.length).toFixed(0)} each</span>
+                                                        <span className="text-[11px] text-indigo-500 font-black">
+                                                            {e.splitType === 'EXACT' && e.splitDetails
+                                                                ? `₹${(e.splitDetails[myId] || 0).toFixed(0)} your share`
+                                                                : `₹${(e.amount / e.participantIds.length).toFixed(0)} each`
+                                                            }
+                                                        </span>
                                                     )}
                                                 </div>
                                                 {(e.createdBy === myId || trip.creatorId === myId) && (

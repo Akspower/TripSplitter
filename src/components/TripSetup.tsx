@@ -116,7 +116,7 @@ const TripSetup: React.FC<{ onComplete: (trip: Trip, myId: string) => void }> = 
                                     required
                                     className="w-full bg-transparent border-none px-0 py-1 focus:ring-0 outline-none font-bold"
                                     value={formData.startDate}
-                                    min={new Date().toISOString().split('T')[0]} // Min today
+                                    min={new Date().toLocaleDateString('en-CA')} // Min today (Local time)
                                     onChange={(e) => {
                                         const newStart = e.target.value;
                                         setFormData(prev => ({
@@ -135,7 +135,7 @@ const TripSetup: React.FC<{ onComplete: (trip: Trip, myId: string) => void }> = 
                                     required
                                     className="w-full bg-transparent border-none px-0 py-1 focus:ring-0 outline-none font-bold"
                                     value={formData.endDate}
-                                    min={formData.startDate || new Date().toISOString().split('T')[0]} // Min start date or today
+                                    min={formData.startDate || new Date().toLocaleDateString('en-CA')} // Min start date or today (Local)
                                     disabled={!formData.startDate}
                                     onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
                                 />
