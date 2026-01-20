@@ -8,6 +8,8 @@ import { IdentificationIcon, SparklesIcon } from '@heroicons/react/24/outline'; 
 import Header from './components/Header';
 import TripSetup from './components/TripSetup';
 import TripJoin from './components/TripJoin';
+import Dashboard from './components/Dashboard';
+import ExpenseForm from './components/ExpenseForm';
 import ConfirmDialog from './components/ui/ConfirmDialog';
 
 export default function App() {
