@@ -193,6 +193,16 @@ export default function App() {
   if (currentTrip) {
     return (
       <div className="min-h-[100dvh] bg-slate-50 selection:bg-indigo-100 selection:text-indigo-900 font-sans">
+        {/* Global Confirm Dialog for Active Trip View */}
+        <ConfirmDialog
+          isOpen={confirmModal.isOpen}
+          title={confirmModal.title}
+          message={confirmModal.message}
+          isDestructive={confirmModal.isDestructive}
+          onConfirm={confirmModal.onConfirm}
+          onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+        />
+
         <Header
           key="active-session-header"
           tripName={currentTrip.name}
@@ -228,14 +238,7 @@ export default function App() {
   return (
     <div className="min-h-[100dvh] bg-slate-50 selection:bg-indigo-100 selection:text-indigo-900 font-sans relative overflow-hidden flex flex-col">
       <Toaster position="top-center" toastOptions={{ className: 'font-bold rounded-2xl shadow-xl', duration: 3000 }} />
-      <ConfirmDialog
-        isOpen={confirmModal.isOpen}
-        title={confirmModal.title}
-        message={confirmModal.message}
-        isDestructive={confirmModal.isDestructive}
-        onConfirm={confirmModal.onConfirm}
-        onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
-      />
+
       <Header key={`header-${viewMode}`} onReset={handleReset} tripId={currentTrip ? (currentTrip as Trip).id : undefined} />
 
       <div className="flex-1 flex flex-col justify-center items-center px-6 relative z-10 pb-20">
