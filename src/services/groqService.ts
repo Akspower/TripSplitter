@@ -98,7 +98,7 @@ export const getTripInsights = async (trip: Trip) => {
         console.warn("Groq AI Error:", error); // Use warn instead of error to avoid noise
 
         // Fallback tips
-        const fallbackTips = getFallbackTips(trip.destination, trip.tripStyle || 'adventure');
+        const fallbackTips = getFallbackTips(trip.destination, trip.members);
 
         // Return a cleaner error/fallback state
         return `
@@ -113,78 +113,66 @@ _Note: Our AI guide is taking a chai break (Server Issues). Showing offline tips
 };
 
 // Preloaded tips for popular Indian destinations (Kept same as before)
-const getFallbackTips = (destination: string, style: string): string => {
+const getFallbackTips = (destination: string, members: { name: string }[]): string => {
     const dest = destination.toLowerCase();
 
-    const tips: Record<string, string> = {
-        'goa': `
-🏖️ **Beach Vibes**
-- North Goa for parties, South Goa for peace
-- Try fish thali at local shacks (₹150-200)
-- Rent a scooty - best way to explore!
-
-💡 **Pro Tip:** Visit Anjuna Flea Market on Wednesdays
-    `,
-        'manali': `
-🏔️ **Mountain Magic**
-- Old Manali has the best cafes & vibes
-- Try Siddu and Trout fish - local delights!
-- Book Rohtang permits in advance
-
-💡 **Pro Tip:** Jogini Waterfall trek is free & stunning
-    `,
-        'jaipur': `
-🏰 **Pink City**
-- Get combo tickets for forts (saves ₹200+)
-- Dal Baati Churma is a must-try!
-- Shop at Johari Bazaar for gems
-
-💡 **Pro Tip:** Visit Nahargarh Fort at sunset
-    `,
-        'ladakh': `
-🏔️ **Land of High Passes**
-- Acclimatize for 2 days before adventure
-- Carry cash - ATMs are rare
-- Try Thukpa and Momos everywhere!
-
-💡 **Pro Tip:** Pangong Lake sunrise > sunset
-    `,
-        'kerala': `
-🌴 **God's Own Country**
-- Houseboat in Alleppey = must do!
-- Try authentic Sadya meal on banana leaf
-- Munnar tea gardens are magical
-
-💡 **Pro Tip:** Book homestays for authentic experience
-    `,
-        'rishikesh': `
-🧘 **Yoga Capital**
-- Laxman Jhula area for cafes & shopping
-- Go rafting (Shivpuri to Rishikesh)
-- Beatles Ashram for silence
-
-💡 **Pro Tip:** Ganga Aarti at Parmarth Niketan is pure bliss
-    `,
-        'dharamshala': `
-🏔️ **Little Tibet**
-- McLeod Ganj for Tibetan culture
-- Triund Trek for views
-- Visit Dalai Lama Temple
-
-💡 **Pro Tip:** Try momos at Tibet Kitchen
-    `
+    // 1. Destination-Specific Tips (Static but solid)
+    const specificTips: Record<string, string[]> = {
+        'goa': [
+            "🏖️ **Beach Mode**: North for buzzing parties, South for peace. Don't forget sunscreen!",
+            "🛵 **Scooty Life**: Rent a bike. It's the law of Goa. Also, fish thali is mandatory.",
+            "💡 **Pro Tip**: Anjuna Flea Market on Wednesday is a vibe."
+        ],
+        'manali': [
+            "🏔️ **Mountain High**: Old Manali cafes > Mall Road crowd. Trust me.",
+            "🍜 **Foodie Alert**: Eat Siddu. It's like a steamed bun hug for your stomach.",
+            "💡 **Pro Tip**: Jogini Waterfall trek is free and totally worth the cardio."
+        ],
+        'jaipur': [
+            "🏰 **Royal Vibes**: Get the composite ticket for forts. Saves money for lassi.",
+            "🛍️ **Shop Smart**: Johari Bazaar for shiny things. Bargain like your life depends on it.",
+            "💡 **Pro Tip**: Nahargarh Fort sunset. Best view in the city, hands down."
+        ],
+        // ... (Keep other destinations if needed, or stick to generic for now to save space)
     };
 
-    for (const [key, tip] of Object.entries(tips)) {
-        if (dest.includes(key)) return tip;
+    // 2. Generic "Roast" / Funny Templates for ANY location
+    const funnyTemplates = [
+        "🎒 **Travel wisdom**: {randomMember} is probably going to overpack. Don't let them!",
+        "💸 **Budget Check**: Keep an eye on {randomMember}, they look ready to splurge on something useless.",
+        "🗺️ **Navigation**: If {randomMember} is navigating, you ARE getting lost. Use Google Maps.",
+        "📸 **Photo Op**: {randomMember} will take 500 photos of the same tree. Be patient.",
+        "☕ **Caffeine Fix**: Find the nearest cafe before {randomMember} gets cranky.",
+        "🍕 **Foodie Tip**: If you can't decide where to eat, just let {randomMember} choose. They have good taste (usually).",
+        "🛑 **Safety First**: Don't do anything {randomMember} wouldn't do. Actually, that sets the bar too low.",
+        "🌅 **Sunrise Mission**: Wake up early! Or just drag {randomMember} out of bed at 11 AM."
+    ];
+
+    // Helper to get random item
+    const pick = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
+    const randomMember = members.length > 0 ? pick(members).name : "someone";
+
+    // Check for specific destination match
+    for (const [key, tips] of Object.entries(specificTips)) {
+        if (dest.includes(key)) {
+            return tips.join('\n\n');
+        }
     }
 
-    return `
-🎒 **Travel Smart (${style} Style)**
-- Keep cash handy for local spots
-- Download offline maps
-- Ask locals for the best food joints!
+    // Default: Random Mix
+    const template1 = pick(funnyTemplates).replace('{randomMember}', randomMember);
+    // Ensure 2nd template uses a different member if possible
+    const otherMembers = members.filter(m => m.name !== randomMember);
+    const secondMember = otherMembers.length > 0 ? pick(otherMembers).name : members[0]?.name || "friend";
+    const template2 = pick(funnyTemplates.filter(t => t !== template1)).replace('{randomMember}', secondMember);
 
-💡 **Pro Tip:** Early mornings = fewer crowds & best photos!
-  `;
+    return `
+### 🎲 Random Trip Wisdom
+
+${template1}
+
+${template2}
+
+💡 **Pro Tip**: Asking locals for food recs is always better than Google!
+    `;
 };
