@@ -29,8 +29,8 @@ const generateWithRetry = async (prompt: string, maxRetries = 3): Promise<string
                         content: prompt
                     }
                 ],
-                model: "llama3-8b-8192", // Faster model for snappy responses
-                temperature: 0.8, // Slightly higher for more creativity/humor
+                model: "mixtral-8x7b-32768", // Switching to Mixtral for better stability
+                temperature: 0.7, // Slightly lower for more reliable output
                 max_tokens: 1024,
             });
 
@@ -95,18 +95,19 @@ export const getTripInsights = async (trip: Trip) => {
     try {
         return await generateWithRetry(prompt);
     } catch (error: any) {
-        // console.error("Groq AI Error:", error);
+        console.warn("Groq AI Error:", error); // Use warn instead of error to avoid noise
 
         // Fallback tips
         const fallbackTips = getFallbackTips(trip.destination, trip.tripStyle || 'adventure');
 
+        // Return a cleaner error/fallback state
         return `
 ### 🌟 Quick Tips for ${trip.destination}
 
 ${fallbackTips}
 
 ---
-_AI service unavailable. Showing offline tips._
+_Note: Our AI guide is taking a chai break (Server Issues). Showing offline tips!_
         `;
     }
 };

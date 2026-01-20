@@ -28,7 +28,9 @@ const mapTripFromDb = (tripData: any, members: any[], expenses: any[]): Trip => 
         category: e.category,
         payerId: e.payer_id,
         participantIds: e.participant_ids,
-        createdBy: e.created_by
+        createdBy: e.created_by,
+        splitType: e.split_type,
+        splitDetails: e.split_details
     }))
 });
 
@@ -154,7 +156,11 @@ export const TripService = {
             category: expense.category,
             payer_id: expense.payerId,
             participant_ids: expense.participantIds,
-            created_by: expense.createdBy
+            created_by: expense.createdBy,
+            // @ts-ignore - implicitly trusting schema has these new columns
+            split_type: expense.splitType || 'EQUAL',
+            // @ts-ignore
+            split_details: expense.splitDetails || {}
         });
 
         if (error) {

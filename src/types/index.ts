@@ -18,6 +18,8 @@ export interface Expense {
   payerId: string;
   participantIds: string[];
   createdBy?: string;
+  splitType?: 'EQUAL' | 'EXACT';
+  splitDetails?: Record<string, number>; // Map of memberId -> amount
 }
 
 export type TripStyle = 'adventure' | 'relaxed' | 'budget' | 'luxury';
