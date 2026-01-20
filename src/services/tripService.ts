@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient';
 import type { Trip, Member, Expense } from '../types';
+import { OfflineQueue } from './offlineQueue';
 
 // Map database rows to our app types
 const mapTripFromDb = (tripData: any, members: any[], expenses: any[]): Trip => ({
@@ -132,9 +133,17 @@ export const TripService = {
         return { success: true, trip };
     },
 
+
+
     async addExpense(tripId: string, expense: Expense): Promise<{ success: boolean, error?: string }> {
         // Generate a simple ID if one isn't provided (schema demands text id)
         const expenseId = expense.id || Math.random().toString(36).substr(2, 9);
+        const expenseWithId = { ...expense, id: expenseId };
+
+        if (!navigator.onLine) {
+            OfflineQueue.saveAction('ADD_EXPENSE', { tripId, expense: expenseWithId });
+            return { success: true }; // Optimistically return true
+        }
 
         const { error } = await supabase.from('expenses').insert({
             id: expenseId,
@@ -149,6 +158,11 @@ export const TripService = {
         });
 
         if (error) {
+            // If offline error, queue it
+            if (error.message.includes('fetch') || error.message.includes('network')) {
+                OfflineQueue.saveAction('ADD_EXPENSE', { tripId, expense: expenseWithId });
+                return { success: true };
+            }
             // console.error('Error adding expense:', error);
             return { success: false, error: error.message };
         }
@@ -173,6 +187,68 @@ export const TripService = {
         return true;
     },
 
+    async removeMember(tripId: string, memberId: string): Promise<boolean> {
+        // 1. Fetch all expenses to analyze
+        const { data: expenses } = await supabase
+            .from('expenses')
+            .select('*')
+            .eq('trip_id', tripId);
+
+        if (!expenses) return false;
+
+        const expensesToDelete: string[] = [];
+        const expensesToUpdate: { id: string, participant_ids: string[] }[] = [];
+
+        for (const e of expenses) {
+            // Case A: Member created or paid for it -> Delete the expense
+            // (Assuming "fake name" means their entered expenses are invalid)
+            if (e.payer_id === memberId || e.created_by === memberId) {
+                expensesToDelete.push(e.id);
+                continue;
+            }
+
+            // Case B: Member is a participant -> Remove from split
+            if (e.participant_ids.includes(memberId)) {
+                const newParticipants = e.participant_ids.filter((id: string) => id !== memberId);
+
+                if (newParticipants.length === 0) {
+                    // If no one else is paying, delete it
+                    expensesToDelete.push(e.id);
+                } else {
+                    expensesToUpdate.push({ id: e.id, participant_ids: newParticipants });
+                }
+            }
+        }
+
+        // 2. Perform Batch Updates
+        if (expensesToDelete.length > 0) {
+            const { error } = await supabase.from('expenses').delete().in('id', expensesToDelete);
+            if (error) {
+                // console.error("Error deleting expenses:", error);
+                return false;
+            }
+        }
+
+        for (const update of expensesToUpdate) {
+            const { error } = await supabase
+                .from('expenses')
+                .update({ participant_ids: update.participant_ids })
+                .eq('id', update.id);
+            if (error) {
+                // console.error("Error updating split:", error);
+                return false;
+            }
+        }
+
+        // 3. Delete the Member
+        const { error: memberError } = await supabase
+            .from('members')
+            .delete()
+            .match({ trip_id: tripId, user_id: memberId });
+
+        return !memberError;
+    },
+
     subscribeToTrip(tripId: string, onUpdate: () => void) {
         const channel = supabase
             .channel(`trip:${tripId}`)
@@ -191,5 +267,29 @@ export const TripService = {
         return () => {
             supabase.removeChannel(channel);
         };
+    },
+
+    async syncPendingActions(): Promise<void> {
+        if (!navigator.onLine || !OfflineQueue.hasPending()) return;
+
+        const queue = OfflineQueue.getQueue();
+        const processedIds: string[] = [];
+
+        for (const action of queue) {
+            try {
+                if (action.type === 'ADD_EXPENSE') {
+                    const { tripId, expense } = action.payload;
+                    const { success } = await this.addExpense(tripId, expense);
+                    if (success) processedIds.push(action.id);
+                }
+                // Handle other types if needed
+            } catch (e) {
+                console.error("Sync failed for action", action.id, e);
+            }
+        }
+
+        if (processedIds.length > 0) {
+            OfflineQueue.clearProcessed(processedIds);
+        }
     }
 };

@@ -1,16 +1,17 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { BanknotesIcon, UsersIcon, SparklesIcon, ArrowRightIcon, ArrowPathIcon, TrashIcon, HandThumbUpIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { BanknotesIcon, UsersIcon, SparklesIcon, ArrowRightIcon, ArrowPathIcon, TrashIcon, HandThumbUpIcon, PlusIcon, ChartBarIcon, Cog6ToothIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { calculateDebts } from '../utils/debtCalculator';
 import { getTripInsights } from '../services/groqService';
 import { formatINR } from '../utils/formatters';
 import type { Trip } from '../types';
 import Analytics from './Analytics';
-import { ChartBarIcon } from '@heroicons/react/24/outline';
+import { TripService } from '../services/tripService';
 
 const Dashboard: React.FC<{ trip: Trip, myId: string, onAddExpense: () => void, onDeleteExpense: (id: string) => void }> = ({ trip, myId, onAddExpense, onDeleteExpense }) => {
     const [activeTab, setActiveTab] = useState<'expenses' | 'summary' | 'insights' | 'analytics'>('expenses');
     const [insights, setInsights] = useState<string | null>(null);
     const [loadingInsights, setLoadingInsights] = useState(false);
+    const [showManageTeam, setShowManageTeam] = useState(false);
     const prevExpenseCount = useRef(trip.expenses.length);
 
     // --- Core Personal Budget Logic ---
@@ -48,7 +49,18 @@ const Dashboard: React.FC<{ trip: Trip, myId: string, onAddExpense: () => void, 
         } finally {
             setLoadingInsights(false);
         }
+        setLoadingInsights(false);
     }, [trip]);
+
+    const handleRemoveMember = async (memberId: string) => {
+        if (!confirm("Remove this member? Their expenses will be deleted/reassigned.")) return;
+        const success = await TripService.removeMember(trip.id, memberId);
+        if (success) {
+            setShowManageTeam(false);
+        } else {
+            alert("Failed to remove member.");
+        }
+    };
 
     // Fetch on tab open
     useEffect(() => {
@@ -197,7 +209,16 @@ const Dashboard: React.FC<{ trip: Trip, myId: string, onAddExpense: () => void, 
                         )}
 
                         {activeTab === 'summary' && (
-                            <div className="space-y-8">
+                            <div className="space-y-6">
+                                <div className="flex justify-end">
+                                    <button
+                                        onClick={() => setShowManageTeam(true)}
+                                        className="text-xs font-black text-indigo-600 uppercase tracking-widest bg-indigo-50 px-4 py-2 rounded-full border border-indigo-100 flex items-center gap-2 hover:bg-indigo-100"
+                                    >
+                                        <Cog6ToothIcon className="w-4 h-4" />
+                                        Manage Team
+                                    </button>
+                                </div>
                                 <div className="bg-white p-10 rounded-[48px] shadow-2xl shadow-slate-100 border border-white">
                                     <h3 className="text-2xl font-black text-slate-900 mb-10 flex items-center gap-4">
                                         <UsersIcon className="w-8 h-8 text-indigo-500" /> Settlement Plan
@@ -324,6 +345,45 @@ const Dashboard: React.FC<{ trip: Trip, myId: string, onAddExpense: () => void, 
                     </button>
                 </div>
             </div>
+            {/* Team Management Modal */}
+            {showManageTeam && (
+                <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+                    <div className="bg-white w-full max-w-md rounded-[32px] p-6 shadow-2xl scale-100 animate-in zoom-in-95 duration-200">
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-2xl font-black text-slate-900 tracking-tight">Team Members</h3>
+                            <button onClick={() => setShowManageTeam(false)} className="p-2 bg-slate-100 rounded-full hover:bg-slate-200">
+                                <XMarkIcon className="w-5 h-5 text-slate-500" />
+                            </button>
+                        </div>
+
+                        <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
+                            {trip.members.map(m => (
+                                <div key={m.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-[20px] border border-slate-100">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm ${m.isCreator ? 'bg-amber-100 text-amber-600' : 'bg-indigo-100 text-indigo-600'}`}>
+                                            {m.isCreator ? '👑' : m.name.charAt(0)}
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-slate-900">{m.name}</p>
+                                            {m.isCreator && <p className="text-[10px] font-black text-amber-500 uppercase">Admin</p>}
+                                        </div>
+                                    </div>
+                                    {/* Delete Button: Only if I am Creator, and Target is NOT me */}
+                                    {trip.creatorId === myId && m.id !== myId && (
+                                        <button
+                                            onClick={() => handleRemoveMember(m.id)}
+                                            className="p-2 text-rose-300 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors"
+                                            title="Remove Member"
+                                        >
+                                            <TrashIcon className="w-5 h-5" />
+                                        </button>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

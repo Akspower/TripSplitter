@@ -9,6 +9,7 @@ interface HeaderProps {
     onReset: () => void;
     onDelete?: () => void;
     isSyncing?: boolean;
+    isOffline?: boolean;
     isCreator?: boolean;
 }
 
@@ -20,7 +21,7 @@ const formatDateRange = (start?: string, end?: string) => {
     return `${s.toLocaleDateString('en-IN', opts)} - ${e.toLocaleDateString('en-IN', { ...opts, year: 'numeric' })}`;
 };
 
-const Header: React.FC<HeaderProps> = ({ tripName, destination, startDate, endDate, onReset, onDelete, isSyncing, isCreator }) => {
+const Header: React.FC<HeaderProps> = ({ tripName, destination, startDate, endDate, onReset, onDelete, isSyncing, isOffline, isCreator }) => {
     const [showExitConfirm, setShowExitConfirm] = useState(false);
 
     return (
@@ -64,9 +65,9 @@ const Header: React.FC<HeaderProps> = ({ tripName, destination, startDate, endDa
                     <div className="min-w-0">
                         <h1 className="text-lg md:text-xl font-black text-slate-900 tracking-tight truncate hidden xs:block">SplitWay</h1>
                         <div className="flex items-center gap-1.5">
-                            <div className={`w-1.5 h-1.5 md:w-2 md:h-2 rounded-full sync-dot ${isSyncing ? 'bg-orange-400' : 'bg-emerald-500'}`}></div>
-                            <span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest truncate">
-                                {isSyncing ? 'Syncing...' : 'Realtime'}
+                            <div className={`w-1.5 h-1.5 md:w-2 md:h-2 rounded-full sync-dot ${isOffline ? 'bg-rose-500' : (isSyncing ? 'bg-orange-400' : 'bg-emerald-500')}`}></div>
+                            <span className={`text-[9px] md:text-[10px] font-black uppercase tracking-widest truncate ${isOffline ? 'text-rose-500' : 'text-slate-400'}`}>
+                                {isOffline ? 'Offline' : (isSyncing ? 'Syncing...' : 'Realtime')}
                             </span>
                         </div>
                     </div>

@@ -17,11 +17,42 @@ export default function App() {
   const [showAddExpense, setShowAddExpense] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [loadingTrip, setLoadingTrip] = useState(true);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+
+  // Network Status & Auto-Sync
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOffline(false);
+      setIsSyncing(true);
+      TripService.syncPendingActions().then(() => {
+        setTimeout(() => setIsSyncing(false), 1000);
+      });
+    };
+    const handleOffline = () => setIsOffline(true);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    // Initial check on mount
+    if (navigator.onLine) {
+      TripService.syncPendingActions();
+    }
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   // Initial Load
   useEffect(() => {
     const savedTripId = localStorage.getItem('tripId');
     const savedMyId = localStorage.getItem('myId');
+
+    // If we have local data but are offline, we should still try to load view
+    // (In a real PWA context, React Query or local caching would handle this better.
+    // For now we assume TripService might need network, unless we cache trip data too.)
+
     if (savedTripId && savedMyId) {
       setMyId(savedMyId);
       loadTrip(savedTripId);
@@ -32,7 +63,7 @@ export default function App() {
 
   // Real-time Subscription
   useEffect(() => {
-    if (currentTrip?.id) {
+    if (currentTrip?.id && !isOffline) {
       // console.log("Subscribing to trip:", currentTrip.id);
       const unsubscribe = TripService.subscribeToTrip(currentTrip.id, () => {
         setIsSyncing(true);
@@ -41,7 +72,7 @@ export default function App() {
       });
       return unsubscribe;
     }
-  }, [currentTrip?.id]);
+  }, [currentTrip?.id, isOffline]);
 
   const loadTrip = async (id: string, isSilent = false) => {
     if (!isSilent) setIsSyncing(true);
@@ -51,9 +82,12 @@ export default function App() {
       // Persist ID only
       localStorage.setItem('tripId', id);
     } else {
-      // If fail to load (e.g. deleted), clear local
-      // localStorage.removeItem('tripId');
-      // setCurrentTrip(null);
+      // If fail to load (e.g. deleted or offline), handle gracefully
+      if (isOffline && currentTrip) {
+        // Keep current state if offline and already loaded
+      } else {
+        // Maybe show error or retry? 
+      }
     }
     setIsSyncing(false);
     setLoadingTrip(false);
@@ -138,6 +172,7 @@ export default function App() {
           endDate={currentTrip.endDate}
           onReset={handleReset}
           isSyncing={isSyncing}
+          isOffline={isOffline}
           isCreator={currentTrip.creatorId === myId}
           onDelete={currentTrip.creatorId === myId ? handleDeleteTrip : undefined}
         />
