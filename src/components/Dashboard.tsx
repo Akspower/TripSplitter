@@ -11,7 +11,7 @@ import toast from 'react-hot-toast';
 import ConfirmDialog from './ui/ConfirmDialog';
 
 
-const Dashboard: React.FC<{ trip: Trip, myId: string, onAddExpense: () => void, onDeleteExpense: (id: string) => void }> = ({ trip, myId, onAddExpense, onDeleteExpense }) => {
+const Dashboard: React.FC<{ trip: Trip, myId: string, onAddExpense: () => void, onDeleteExpense: (id: string) => void, onRefreshTrip: () => void }> = ({ trip, myId, onAddExpense, onDeleteExpense, onRefreshTrip }) => {
     const [activeTab, setActiveTab] = useState<'expenses' | 'summary' | 'insights' | 'analytics'>('expenses');
     const [insights, setInsights] = useState<string | null>(null);
     const [loadingInsights, setLoadingInsights] = useState(false);
@@ -20,21 +20,23 @@ const Dashboard: React.FC<{ trip: Trip, myId: string, onAddExpense: () => void, 
     // Optimistic UI state for deleted members
     const [hiddenMemberIds, setHiddenMemberIds] = useState<Set<string>>(new Set());
 
-    // Filtered members for UI
-    const displayedMembers = useMemo(() => {
-        return trip.members.filter(m => !hiddenMemberIds.has(m.id));
-    }, [trip.members, hiddenMemberIds]);
+    // Create a computed trip object that filters out hidden members globally for THIS component
+    const optimisticTrip = useMemo(() => {
+        if (hiddenMemberIds.size === 0) return trip;
+        return {
+            ...trip,
+            members: trip.members.filter(m => !hiddenMemberIds.has(m.id))
+        };
+    }, [trip, hiddenMemberIds]);
 
     // Cleanup optimistic state when trip updates from server
     useEffect(() => {
         setHiddenMemberIds(prev => {
             const next = new Set(prev);
-            // If server update confirms deletion (id not in trip.members), remove from hidden set to keep it clean
-            // Actually, if it's gone from trip.members, we don't need to hide it anymore.
-            // So we can just clear ids that are no longer in trip.members.
             const currentIds = new Set(trip.members.map(m => m.id));
             for (const id of next) {
                 if (!currentIds.has(id)) {
+                    // Member is gone from server data, so we can stop hiding it explicitly
                     next.delete(id);
                 }
             }
@@ -49,34 +51,34 @@ const Dashboard: React.FC<{ trip: Trip, myId: string, onAddExpense: () => void, 
 
     const prevExpenseCount = useRef(trip.expenses.length);
 
-    // --- Core Personal Budget Logic ---
-    const tripTotal = useMemo(() => trip.expenses.reduce((sum, e) => sum + e.amount, 0), [trip]);
+    // --- Core Personal Budget Logic (Using optimisticTrip) ---
+    const tripTotal = useMemo(() => optimisticTrip.expenses.reduce((sum, e) => sum + e.amount, 0), [optimisticTrip]);
 
     const myConsumption = useMemo(() => {
-        return trip.expenses.reduce((sum, e) => {
+        return optimisticTrip.expenses.reduce((sum, e) => {
             if (e.participantIds.includes(myId)) {
                 return sum + (e.amount / e.participantIds.length);
             }
             return sum;
         }, 0);
-    }, [trip, myId]);
+    }, [optimisticTrip, myId]);
 
     const myPayments = useMemo(() => {
-        return trip.expenses.reduce((sum, e) => {
+        return optimisticTrip.expenses.reduce((sum, e) => {
             if (e.payerId === myId) return sum + e.amount;
             return sum;
         }, 0);
-    }, [trip, myId]);
+    }, [optimisticTrip, myId]);
 
     const myBalance = myPayments - myConsumption;
 
-    const debts = useMemo(() => calculateDebts(trip), [trip]);
+    const debts = useMemo(() => calculateDebts(optimisticTrip), [optimisticTrip]);
 
     const fetchInsights = useCallback(async (force = false) => {
         if (insights && !force) return;
         setLoadingInsights(true);
         try {
-            const data = await getTripInsights(trip);
+            const data = await getTripInsights(optimisticTrip);
             setInsights(data || "No insights found.");
         } catch (e) {
             console.error(e);
@@ -85,7 +87,7 @@ const Dashboard: React.FC<{ trip: Trip, myId: string, onAddExpense: () => void, 
             setLoadingInsights(false);
         }
         setLoadingInsights(false);
-    }, [trip]);
+    }, [optimisticTrip]);
 
     const handleRemoveMember = async (memberId: string) => {
         setConfirmModal({
@@ -109,6 +111,7 @@ const Dashboard: React.FC<{ trip: Trip, myId: string, onAddExpense: () => void, 
                     toast.success('Member removed!', { id: toastId });
                     // Keep hidden (it is already in hiddenMemberIds)
                     // Server update will eventually come and sync state
+                    onRefreshTrip();
                 } else {
                     toast.error('Could not remove member.', { id: toastId });
                     // Revert optimistic update
@@ -219,11 +222,11 @@ const Dashboard: React.FC<{ trip: Trip, myId: string, onAddExpense: () => void, 
                     </div>
 
                     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        {activeTab === 'analytics' && <Analytics trip={trip} myId={myId} />}
+                        {activeTab === 'analytics' && <Analytics trip={optimisticTrip} myId={myId} />}
 
                         {activeTab === 'expenses' && (
                             <div className="space-y-4">
-                                {trip.expenses.length === 0 ? (
+                                {optimisticTrip.expenses.length === 0 ? (
                                     <div className="text-center py-32 bg-white/40 rounded-[48px] border-4 border-dashed border-slate-200">
                                         <div className="bg-slate-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
                                             <BanknotesIcon className="w-10 h-10 text-slate-300" />
@@ -232,7 +235,7 @@ const Dashboard: React.FC<{ trip: Trip, myId: string, onAddExpense: () => void, 
                                         <button onClick={onAddExpense} className="text-indigo-600 font-black mt-3 text-sm uppercase tracking-[0.2em] hover:tracking-[0.3em] transition-all">Add First Bill</button>
                                     </div>
                                 ) : (
-                                    trip.expenses.slice().reverse().map(e => (
+                                    optimisticTrip.expenses.slice().reverse().map(e => (
                                         <div key={e.id} className={`bg-white p-6 rounded-[40px] border border-white shadow-xl shadow-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between group card-3d ${!e.participantIds.includes(myId) ? 'opacity-40 grayscale-[0.8]' : ''}`}>
                                             <div className="flex items-center gap-6 w-full sm:w-auto">
                                                 <div className="w-16 h-16 bg-slate-50 rounded-[28px] flex items-center justify-center text-3xl shadow-inner group-hover:bg-indigo-50 transition-colors shrink-0">
@@ -254,7 +257,7 @@ const Dashboard: React.FC<{ trip: Trip, myId: string, onAddExpense: () => void, 
                                                     <p className="text-[10px] font-bold text-slate-400 mb-2">{new Date(e.date).toLocaleDateString('en-IN', { weekday: 'short', hour: '2-digit', minute: '2-digit' })}</p>
                                                     <div className="flex flex-wrap items-center gap-2">
                                                         <span className={`text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest ${e.payerId === myId ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200' : 'bg-slate-100 text-slate-500'}`}>
-                                                            {e.payerId === myId ? 'You Paid' : trip.members.find(m => m.id === e.payerId)?.name || 'Unknown'}
+                                                            {e.payerId === myId ? 'You Paid' : optimisticTrip.members.find(m => m.id === e.payerId)?.name || 'Unknown'}
                                                         </span>
                                                         {!e.participantIds.includes(myId) && (
                                                             <span className="text-[9px] font-black bg-rose-50 text-rose-500 px-3 py-1 rounded-full uppercase tracking-widest">Not For You</span>
@@ -317,7 +320,7 @@ const Dashboard: React.FC<{ trip: Trip, myId: string, onAddExpense: () => void, 
                                                     <div className="flex items-center gap-3 sm:gap-6 mb-4 sm:mb-0 w-full sm:w-auto">
                                                         {/* From Avatar */}
                                                         <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center font-black text-lg shadow-inner shrink-0 ${d.from === myId ? 'bg-gradient-to-br from-rose-400 to-rose-600 text-white shadow-rose-200' : 'bg-slate-50 text-slate-600 border border-slate-100'}`}>
-                                                            {trip.members.find(m => m.id === d.from)?.name.charAt(0)}
+                                                            {optimisticTrip.members.find(m => m.id === d.from)?.name.charAt(0)}
                                                         </div>
 
                                                         {/* Arrow */}
@@ -327,16 +330,16 @@ const Dashboard: React.FC<{ trip: Trip, myId: string, onAddExpense: () => void, 
 
                                                         {/* To Avatar */}
                                                         <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center font-black text-lg shadow-inner shrink-0 ${d.to === myId ? 'bg-gradient-to-br from-emerald-400 to-emerald-600 text-white shadow-emerald-200' : 'bg-slate-50 text-slate-600 border border-slate-100'}`}>
-                                                            {trip.members.find(m => m.id === d.to)?.name.charAt(0)}
+                                                            {optimisticTrip.members.find(m => m.id === d.to)?.name.charAt(0)}
                                                         </div>
 
                                                         {/* Text Info - Truncated */}
                                                         <div className="ml-1 sm:ml-2 min-w-0 flex-1">
                                                             <p className="text-[10px] sm:text-[11px] font-black text-slate-400 uppercase tracking-widest mb-0.5 truncate">
-                                                                {d.from === myId ? 'YOU OWE' : trip.members.find(m => m.id === d.from)?.name}
+                                                                {d.from === myId ? 'YOU OWE' : optimisticTrip.members.find(m => m.id === d.from)?.name}
                                                             </p>
                                                             <p className="text-base sm:text-lg font-black text-slate-800 truncate leading-tight">
-                                                                To {d.to === myId ? 'YOU' : trip.members.find(m => m.id === d.to)?.name}
+                                                                To {d.to === myId ? 'YOU' : optimisticTrip.members.find(m => m.id === d.to)?.name}
                                                             </p>
                                                         </div>
                                                     </div>
@@ -349,7 +352,7 @@ const Dashboard: React.FC<{ trip: Trip, myId: string, onAddExpense: () => void, 
 
                                                         {d.from === myId && (
                                                             <a
-                                                                href={getUPILink(trip.members.find(m => m.id === d.to)?.name || '', d.amount)}
+                                                                href={getUPILink(optimisticTrip.members.find(m => m.id === d.to)?.name || '', d.amount)}
                                                                 className="bg-slate-900 text-white text-[10px] font-bold px-4 py-2 rounded-full uppercase tracking-widest hover:bg-indigo-600 transition-colors flex items-center gap-1"
                                                             >
                                                                 Pay Now <ArrowRightIcon className="w-3 h-3" />
@@ -395,7 +398,7 @@ const Dashboard: React.FC<{ trip: Trip, myId: string, onAddExpense: () => void, 
 
                                         <div className="text-center pt-8">
                                             <p className="animate-pulse font-black text-xl text-indigo-200 tracking-tight">Crafting Your Strategy...</p>
-                                            <p className="text-slate-500 text-xs sm:text-sm mt-2 font-bold uppercase tracking-widest">Parsing {trip.expenses.length} expenses & finding hacks</p>
+                                            <p className="text-slate-500 text-xs sm:text-sm mt-2 font-bold uppercase tracking-widest">Parsing {optimisticTrip.expenses.length} expenses & finding hacks</p>
                                         </div>
                                     </div>
                                 ) : (
@@ -443,7 +446,7 @@ const Dashboard: React.FC<{ trip: Trip, myId: string, onAddExpense: () => void, 
                         </div>
 
                         <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
-                            {displayedMembers.map(m => (
+                            {optimisticTrip.members.map(m => (
                                 <div key={m.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-[20px] border border-slate-100">
                                     <div className="flex items-center gap-3">
                                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm ${m.isCreator ? 'bg-amber-100 text-amber-600' : 'bg-indigo-100 text-indigo-600'}`}>

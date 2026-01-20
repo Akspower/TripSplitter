@@ -194,6 +194,7 @@ export default function App() {
           myId={myId}
           onAddExpense={() => setShowAddExpense(true)}
           onDeleteExpense={handleDeleteExpense}
+          onRefreshTrip={() => loadTrip(currentTrip.id)}
         />
 
         {showAddExpense && (
