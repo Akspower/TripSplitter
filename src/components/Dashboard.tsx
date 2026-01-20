@@ -7,11 +7,21 @@ import type { Trip } from '../types';
 import Analytics from './Analytics';
 import { TripService } from '../services/tripService';
 
+import toast from 'react-hot-toast';
+import ConfirmDialog from './ui/ConfirmDialog';
+
+
 const Dashboard: React.FC<{ trip: Trip, myId: string, onAddExpense: () => void, onDeleteExpense: (id: string) => void }> = ({ trip, myId, onAddExpense, onDeleteExpense }) => {
     const [activeTab, setActiveTab] = useState<'expenses' | 'summary' | 'insights' | 'analytics'>('expenses');
     const [insights, setInsights] = useState<string | null>(null);
     const [loadingInsights, setLoadingInsights] = useState(false);
     const [showManageTeam, setShowManageTeam] = useState(false);
+
+    // Modal State
+    const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; title: string; message: string; onConfirm: () => void; isDestructive?: boolean }>({
+        isOpen: false, title: '', message: '', onConfirm: () => { }, isDestructive: false
+    });
+
     const prevExpenseCount = useRef(trip.expenses.length);
 
     // --- Core Personal Budget Logic ---
@@ -53,13 +63,22 @@ const Dashboard: React.FC<{ trip: Trip, myId: string, onAddExpense: () => void, 
     }, [trip]);
 
     const handleRemoveMember = async (memberId: string) => {
-        if (!confirm("Remove this member? Their expenses will be deleted/reassigned.")) return;
-        const success = await TripService.removeMember(trip.id, memberId);
-        if (success) {
-            setShowManageTeam(false);
-        } else {
-            alert("Failed to remove member.");
-        }
+        setConfirmModal({
+            isOpen: true,
+            title: 'Remove Member?',
+            message: 'This will delete their payments and remove them from all splits. This cannot be undone.',
+            isDestructive: true,
+            onConfirm: async () => {
+                const success = await TripService.removeMember(trip.id, memberId);
+                if (success) {
+                    toast.success('Member removed successfully');
+                    setShowManageTeam(false);
+                } else {
+                    toast.error('Failed to remove member');
+                }
+                setConfirmModal(prev => ({ ...prev, isOpen: false }));
+            }
+        });
     };
 
     // Fetch on tab open
@@ -79,8 +98,24 @@ const Dashboard: React.FC<{ trip: Trip, myId: string, onAddExpense: () => void, 
         }
     }, [trip.expenses.length]);
 
+    const getUPILink = (payeeName: string, amount: number) => {
+        // This is a generic intent link. In a real app, you'd store the user's UPI ID.
+        // For now, we leave the PA (Payee Address) empty so the user can fill it, or use a placeholder.
+        // Or we can prompt the user to ask their friend for their UPI ID.
+        return `upi://pay?pa=&pn=${encodeURIComponent(payeeName)}&am=${amount}&cu=INR&tn=${encodeURIComponent(`Settlement for ${trip.name}`)}`;
+    };
+
     return (
         <div className="pb-40 px-4 md:px-6 pt-10 max-w-7xl mx-auto w-full overflow-hidden">
+            <ConfirmDialog
+                isOpen={confirmModal.isOpen}
+                title={confirmModal.title}
+                message={confirmModal.message}
+                isDestructive={confirmModal.isDestructive}
+                onConfirm={confirmModal.onConfirm}
+                onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+            />
+            {/* ... Rest of JSX ... */}
             <div className="lg:grid lg:grid-cols-12 lg:gap-10 lg:items-start">
                 {/* Left Column - Net Standing */}
                 <div className="lg:col-span-5 space-y-6 mb-12 lg:mb-0 lg:sticky lg:top-28">
@@ -265,11 +300,21 @@ const Dashboard: React.FC<{ trip: Trip, myId: string, onAddExpense: () => void, 
                                                         </div>
                                                     </div>
 
-                                                    {/* Amount */}
-                                                    <div className="w-full sm:w-auto text-right border-t sm:border-t-0 border-slate-100 pt-3 sm:pt-0 mt-2 sm:mt-0">
+                                                    {/* Amount & Action */}
+                                                    <div className="w-full sm:w-auto text-right border-t sm:border-t-0 border-slate-100 pt-3 sm:pt-0 mt-2 sm:mt-0 flex flex-col items-end gap-2">
                                                         <span className={`text-2xl sm:text-3xl font-black block sm:inline ${d.from === myId ? 'text-rose-600' : (d.to === myId ? 'text-emerald-600' : 'text-slate-900')}`}>
                                                             {formatINR(d.amount)}
                                                         </span>
+
+                                                        {d.from === myId && (
+                                                            <a
+                                                                href={getUPILink(trip.members.find(m => m.id === d.to)?.name || '', d.amount)}
+                                                                className="bg-slate-900 text-white text-[10px] font-bold px-4 py-2 rounded-full uppercase tracking-widest hover:bg-indigo-600 transition-colors flex items-center gap-1"
+                                                            >
+                                                                Pay Now <ArrowRightIcon className="w-3 h-3" />
+                                                            </a>
+                                                        )}
+
                                                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block sm:hidden">to settle</span>
                                                     </div>
                                                 </div>

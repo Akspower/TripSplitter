@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { TripService } from '../services/tripService';
 import type { Trip } from '../types';
 
-const TripJoin: React.FC<{ onJoin: (trip: Trip, myId: string) => void, onBack: () => void }> = ({ onJoin, onBack }) => {
+const TripJoin: React.FC<{ onJoin: (trip: Trip, myId: string) => void, onBack: () => void, initialTripId?: string }> = ({ onJoin, onBack, initialTripId }) => {
     const [step, setStep] = useState(1);
-    const [tripId, setTripId] = useState('');
+    const [tripId, setTripId] = useState(initialTripId || '');
     const [guestName, setGuestName] = useState('');
     const [error, setError] = useState('');
     const [isJoining, setIsJoining] = useState(false);
@@ -13,10 +13,16 @@ const TripJoin: React.FC<{ onJoin: (trip: Trip, myId: string) => void, onBack: (
     const [showPinModal, setShowPinModal] = useState(false);
     const [pendingMemberId, setPendingMemberId] = useState<string | null>(null);
 
-    const fetchTripMembers = async () => {
+    React.useEffect(() => {
+        if (initialTripId) {
+            handleFetchTrip(initialTripId);
+        }
+    }, [initialTripId]);
+
+    const handleFetchTrip = async (id: string) => {
         setIsJoining(true);
         setError('');
-        const result = await TripService.getTrip(tripId.trim());
+        const result = await TripService.getTrip(id.trim());
 
         if (result.success && result.trip) {
             setFoundTrip(result.trip);
@@ -26,6 +32,8 @@ const TripJoin: React.FC<{ onJoin: (trip: Trip, myId: string) => void, onBack: (
         }
         setIsJoining(false);
     };
+
+    const fetchTripMembers = () => handleFetchTrip(tripId);
 
     const claimMember = (memberId: string) => {
         if (!foundTrip) return;

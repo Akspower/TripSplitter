@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import toast, { Toaster } from 'react-hot-toast';
 import type { Trip, Expense } from './types';
 import { TripService } from './services/tripService';
 import { IdentificationIcon, SparklesIcon } from '@heroicons/react/24/outline'; // Icons used in landing
@@ -14,6 +15,17 @@ export default function App() {
   const [currentTrip, setCurrentTrip] = useState<Trip | null>(null);
   const [myId, setMyId] = useState<string>('');
   const [viewMode, setViewMode] = useState<'landing' | 'create' | 'join'>('landing');
+  const [initialTripId, setInitialTripId] = useState<string>('');
+
+  // Check for Deep Link on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const joinId = params.get('join');
+    if (joinId) {
+      setInitialTripId(joinId);
+      setViewMode('join');
+    }
+  }, []);
   const [showAddExpense, setShowAddExpense] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [loadingTrip, setLoadingTrip] = useState(true);
@@ -128,7 +140,7 @@ export default function App() {
       setShowAddExpense(false);
       // Trip update will come via subscription
     } else {
-      alert(`Failed to add expense: ${result.error}`);
+      toast.error(`Failed to add expense: ${result.error}`);
     }
   };
 
@@ -197,7 +209,8 @@ export default function App() {
 
   return (
     <div className="min-h-[100dvh] bg-slate-50 selection:bg-indigo-100 selection:text-indigo-900 font-sans relative overflow-hidden flex flex-col">
-      <Header key={`header-${viewMode}`} onReset={handleReset} />
+      <Toaster position="top-center" toastOptions={{ className: 'font-bold rounded-2xl shadow-xl', duration: 3000 }} />
+      <Header key={`header-${viewMode}`} onReset={handleReset} tripId={currentTrip ? (currentTrip as Trip).id : undefined} />
 
       <div className="flex-1 flex flex-col justify-center items-center px-6 relative z-10 pb-20">
 
@@ -242,7 +255,7 @@ export default function App() {
         )}
 
         {viewMode === 'join' && (
-          <TripJoin onJoin={handleCreateOrJoin} onBack={() => setViewMode('landing')} />
+          <TripJoin onJoin={handleCreateOrJoin} onBack={() => setViewMode('landing')} initialTripId={initialTripId} />
         )}
 
       </div>

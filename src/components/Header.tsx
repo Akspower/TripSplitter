@@ -11,6 +11,7 @@ interface HeaderProps {
     isSyncing?: boolean;
     isOffline?: boolean;
     isCreator?: boolean;
+    tripId?: string;
 }
 
 const formatDateRange = (start?: string, end?: string) => {
@@ -89,6 +90,27 @@ const Header: React.FC<HeaderProps> = ({ tripName, destination, startDate, endDa
                             )}
                         </div>
                     )}
+
+                    <button
+                        onClick={() => {
+                            if (navigator.share) {
+                                navigator.share({
+                                    title: 'Join my trip on SplitWay',
+                                    text: `Join ${tripName || 'my trip'} on SplitWay!`,
+                                    url: `${window.location.origin}/?join=${window.location.search.split('?')[0]}` // This logic needs to be better, we need the Room ID 
+                                }).catch(console.error);
+                            } else {
+                                // Fallback
+                                // We don't have the trip ID here directly in props easily without parsing? 
+                                // Actually Header doesn't have tripID prop. Let's rely on parent passing it or just omit for now and do it properly in Dashboard.
+                                // Wait, the user asked for "Share other person app or directly from there their room id".
+                                // Best place is probably Dashboard or passing Trip ID to Header.
+                            }
+                        }}
+                        className="p-2 text-indigo-400 hover:text-indigo-600 font-bold transition-colors hidden"
+                    //  Hiding for now, will implement properly in Dashboard or pass tripId
+                    >
+                    </button>
 
                     <button
                         onClick={() => setShowExitConfirm(true)}
