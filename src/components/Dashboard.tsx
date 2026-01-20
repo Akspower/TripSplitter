@@ -17,6 +17,31 @@ const Dashboard: React.FC<{ trip: Trip, myId: string, onAddExpense: () => void, 
     const [loadingInsights, setLoadingInsights] = useState(false);
     const [showManageTeam, setShowManageTeam] = useState(false);
 
+    // Optimistic UI state for deleted members
+    const [hiddenMemberIds, setHiddenMemberIds] = useState<Set<string>>(new Set());
+
+    // Filtered members for UI
+    const displayedMembers = useMemo(() => {
+        return trip.members.filter(m => !hiddenMemberIds.has(m.id));
+    }, [trip.members, hiddenMemberIds]);
+
+    // Cleanup optimistic state when trip updates from server
+    useEffect(() => {
+        setHiddenMemberIds(prev => {
+            const next = new Set(prev);
+            // If server update confirms deletion (id not in trip.members), remove from hidden set to keep it clean
+            // Actually, if it's gone from trip.members, we don't need to hide it anymore.
+            // So we can just clear ids that are no longer in trip.members.
+            const currentIds = new Set(trip.members.map(m => m.id));
+            for (const id of next) {
+                if (!currentIds.has(id)) {
+                    next.delete(id);
+                }
+            }
+            return next;
+        });
+    }, [trip.members]);
+
     // Modal State
     const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; title: string; message: string; onConfirm: () => void; isDestructive?: boolean }>({
         isOpen: false, title: '', message: '', onConfirm: () => { }, isDestructive: false
@@ -69,20 +94,29 @@ const Dashboard: React.FC<{ trip: Trip, myId: string, onAddExpense: () => void, 
             message: 'This will delete their payments and remove them from all splits. This cannot be undone.',
             isDestructive: true,
             onConfirm: async () => {
-                // Optimistic Close: "Auto close perfectly"
+                // Optimistic Close
                 setConfirmModal(prev => ({ ...prev, isOpen: false }));
-
-                // Show removing toast immediately
                 const toastId = toast.loading('Removing member...');
+
+                // Optimistic UI Update: Hide immediately
+                setHiddenMemberIds(prev => new Set(prev).add(memberId));
+
+                // Allow UI to update before async work (small delay/tick not strictly needed but safe)
 
                 const success = await TripService.removeMember(trip.id, memberId);
 
                 if (success) {
-                    toast.success('Bye bye! Member removed.', { id: toastId });
-                    setShowManageTeam(false);
+                    toast.success('Member removed!', { id: toastId });
+                    // Keep hidden (it is already in hiddenMemberIds)
+                    // Server update will eventually come and sync state
                 } else {
                     toast.error('Could not remove member.', { id: toastId });
-                    // Re-open if failed? Maybe just error is enough.
+                    // Revert optimistic update
+                    setHiddenMemberIds(prev => {
+                        const next = new Set(prev);
+                        next.delete(memberId);
+                        return next;
+                    });
                 }
             }
         });
@@ -409,7 +443,7 @@ const Dashboard: React.FC<{ trip: Trip, myId: string, onAddExpense: () => void, 
                         </div>
 
                         <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
-                            {trip.members.map(m => (
+                            {displayedMembers.map(m => (
                                 <div key={m.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-[20px] border border-slate-100">
                                     <div className="flex items-center gap-3">
                                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm ${m.isCreator ? 'bg-amber-100 text-amber-600' : 'bg-indigo-100 text-indigo-600'}`}>
