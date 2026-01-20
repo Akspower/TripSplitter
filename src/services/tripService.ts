@@ -108,14 +108,15 @@ export const TripService = {
         return this.getTrip(tripId);
     },
 
-    async getTrip(tripId: string): Promise<{ success: boolean, trip?: Trip }> {
+    async getTrip(tripId: string): Promise<{ success: boolean, trip?: Trip, error?: string }> {
         const { data: tripData, error: tripError } = await supabase
             .from('trips')
             .select('*')
             .eq('id', tripId)
             .single();
 
-        if (tripError || !tripData) return { success: false };
+        if (tripError) return { success: false, error: tripError.message };
+        if (!tripData) return { success: false, error: 'NOT_FOUND' };
 
         const { data: members, error: memberError } = await supabase
             .from('members')
@@ -263,7 +264,7 @@ export const TripService = {
         return true;
     },
 
-    subscribeToTrip(tripId: string, onUpdate: () => void) {
+    subscribeToTrip(tripId: string, onUpdate: () => void, onDelete?: () => void) {
         const channel = supabase
             .channel(`trip:${tripId}`)
             .on(
@@ -275,6 +276,13 @@ export const TripService = {
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'members', filter: `trip_id=eq.${tripId}` },
                 () => onUpdate()
+            )
+            .on(
+                'postgres_changes',
+                { event: 'DELETE', schema: 'public', table: 'trips', filter: `id=eq.${tripId}` },
+                () => {
+                    if (onDelete) onDelete();
+                }
             )
             .subscribe();
 

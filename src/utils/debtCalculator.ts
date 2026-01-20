@@ -9,13 +9,20 @@ export const calculateDebts = (trip: Trip): Debt[] => {
 
     if (expense.splitType === 'EXACT' && expense.splitDetails) {
       // Handle Unequal Split
+      let totalSplitAmt = 0;
       Object.entries(expense.splitDetails).forEach(([memberId, amount]) => {
         if (balances[memberId] !== undefined) {
           balances[memberId] -= amount;
+          totalSplitAmt += amount;
         }
       });
-      // Sanity Check: If splitDetails sum != total, we assume the payer covers the diff or it's just a loss.
-      // For V1, we assume form validation ensures this matches.
+
+      // CRITICAL FIX: If split total doesn't match expense amount (rounding or error),
+      // the difference must be assigned to the payer's consumption (or loss) to ensure Zero Sum.
+      const diff = expense.amount - totalSplitAmt;
+      if (Math.abs(diff) > 0.001) {
+        balances[expense.payerId] -= diff;
+      }
     } else {
       // Default: Equal Split
       const amountPerPerson = expense.amount / expense.participantIds.length;

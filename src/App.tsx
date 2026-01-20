@@ -116,9 +116,14 @@ export default function App() {
       // If fail to load (e.g. deleted or offline), handle gracefully
       if (isOffline && currentTrip) {
         // Keep current state if offline and already loaded
+        setLoadingTrip(false);
+      } else if (result.error === 'NOT_FOUND') {
+        // Trip no longer exists on server
+        toast.error("This trip no longer exists.");
+        handleReset();
       } else {
-        // If we have no cache and failed, maybe clear?
-        // But for "refresh" safety, we hopefully loaded cache above.
+        // Other errors (network etc), just stop loading
+        setLoadingTrip(false);
       }
     }
     setIsSyncing(false);

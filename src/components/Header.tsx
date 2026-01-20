@@ -12,6 +12,7 @@ interface HeaderProps {
     isOffline?: boolean;
     isCreator?: boolean;
     tripId?: string;
+    userName?: string;
 }
 
 const formatDateRange = (start?: string, end?: string) => {
@@ -22,12 +23,12 @@ const formatDateRange = (start?: string, end?: string) => {
     return `${s.toLocaleDateString('en-IN', opts)} - ${e.toLocaleDateString('en-IN', { ...opts, year: 'numeric' })}`;
 };
 
-const Header: React.FC<HeaderProps> = ({ tripName, destination, startDate, endDate, onReset, onDelete, isSyncing, isOffline, isCreator, tripId }) => {
+const Header: React.FC<HeaderProps> = ({ tripName, destination, startDate, endDate, onReset, onDelete, isSyncing, isOffline, isCreator, tripId, userName }) => {
     const [showExitConfirm, setShowExitConfirm] = useState(false);
 
     return (
         <>
-            {/* Exit Confirmation Modal */}
+            {/* Logout Confirmation Modal */}
             {showExitConfirm && (
                 <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
                     <div className="bg-white w-full max-w-sm rounded-[32px] p-6 shadow-2xl scale-100 animate-in zoom-in-95 duration-200">
@@ -35,22 +36,22 @@ const Header: React.FC<HeaderProps> = ({ tripName, destination, startDate, endDa
                             <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-2">
                                 <ArrowLeftOnRectangleIcon className="w-8 h-8 text-slate-500" />
                             </div>
-                            <h3 className="text-2xl font-black text-slate-900 tracking-tight">Leave Trip?</h3>
+                            <h3 className="text-2xl font-black text-slate-900 tracking-tight">Logout {userName || 'User'}?</h3>
                             <p className="text-slate-500 font-medium leading-relaxed">
-                                You can rejoin later using the Room ID. Your expenses will be saved safely!
+                                Are you sure you want to sign out? You can rejoin anytime using the Room ID.
                             </p>
                             <div className="grid grid-cols-2 gap-3 pt-4">
                                 <button
                                     onClick={() => setShowExitConfirm(false)}
                                     className="py-4 rounded-2xl font-bold text-slate-500 hover:bg-slate-50 transition-colors"
                                 >
-                                    Stay
+                                    Cancel
                                 </button>
                                 <button
                                     onClick={onReset}
-                                    className="py-4 rounded-2xl font-black bg-rose-500 text-white shadow-lg shadow-rose-200 hover:bg-rose-600 transition-colors"
+                                    className="py-4 rounded-2xl font-black bg-slate-900 text-white shadow-lg shadow-slate-200 hover:bg-slate-800 transition-colors"
                                 >
-                                    Exit Trip
+                                    Logout
                                 </button>
                             </div>
                         </div>
