@@ -69,14 +69,21 @@ const Dashboard: React.FC<{ trip: Trip, myId: string, onAddExpense: () => void, 
             message: 'This will delete their payments and remove them from all splits. This cannot be undone.',
             isDestructive: true,
             onConfirm: async () => {
+                // Optimistic Close: "Auto close perfectly"
+                setConfirmModal(prev => ({ ...prev, isOpen: false }));
+
+                // Show removing toast immediately
+                const toastId = toast.loading('Removing member...');
+
                 const success = await TripService.removeMember(trip.id, memberId);
+
                 if (success) {
-                    toast.success('Member removed successfully');
+                    toast.success('Bye bye! Member removed.', { id: toastId });
                     setShowManageTeam(false);
                 } else {
-                    toast.error('Failed to remove member');
+                    toast.error('Could not remove member.', { id: toastId });
+                    // Re-open if failed? Maybe just error is enough.
                 }
-                setConfirmModal(prev => ({ ...prev, isOpen: false }));
             }
         });
     };

@@ -29,8 +29,8 @@ const generateWithRetry = async (prompt: string, maxRetries = 3): Promise<string
                         content: prompt
                     }
                 ],
-                model: "llama-3.3-70b-versatile",
-                temperature: 0.7,
+                model: "llama3-8b-8192", // Faster model for snappy responses
+                temperature: 0.8, // Slightly higher for more creativity/humor
                 max_tokens: 1024,
             });
 
@@ -75,23 +75,21 @@ export const getTripInsights = async (trip: Trip) => {
     const topSpendersText = sortedSpenders.slice(0, 3).map(s => `${s.name} (₹${s.amt})`).join(', ');
 
     const prompt = `
-    Analyze this trip to ${trip.destination}.
+    Context: Trip to ${trip.destination}, ${tripDays} days in ${month}. Vibe: ${trip.tripStyle || 'Adventure'}.
+    Who's spending: ${topSpendersText}.
+    Total Items: ${trip.expenses.length}.
     
-    **Hard Stats (Use these):**
-    - Top Spender: ${highestPayer?.name || 'None'} (₹${highestPayer?.amt || 0})
-    - All Spenders: ${topSpendersText}
-    - Total Expenses: ${trip.expenses.length}
+    You are a funny, slightly sarcastic, roast-friendly travel buddy. You are NOT an AI. You are just a smart friend.
     
-    **Context:**
-    - Dates: ${trip.startDate} to ${trip.endDate} (${tripDays} days in ${month})
-    - Vibe: ${trip.tripStyle || 'Adventure'}
+    Task:
+    1. Roast the top spender (${highestPayer?.name}) gently for being rich, or the group for being broke.
+    2. Give 2 genuinely cool, non-touristy recommendations for ${trip.destination}.
+    3. Add a "Pro Tip" that sounds like a local secret.
     
-    **Task (Be fast, friendly & concise - Max 100 words):**
-    1. 💸 **Money Update:** Mention explicitly who paid the most (${highestPayer?.name}).
-    2. 🗺️ **Local Guide:** 2 specific food/places for ${trip.destination} in ${month}.
-    3. 💡 **Pro Tip:** Short hack for this trip.
-
-    Output using "Bestie" persona. Use emojis.
+    Format:
+    - Keep it SHORT (under 80 words).
+    - Use fun emojis.
+    - No robotic intros like "Here is an analysis". Just dive in.
     `;
 
     try {
