@@ -194,7 +194,10 @@ export const TripService = {
             .select('*')
             .eq('trip_id', tripId);
 
-        if (!expenses) return false;
+        if (!expenses) {
+            console.error('Failed to fetch expenses for deletion analysis');
+            return false;
+        }
 
         const expensesToDelete: string[] = [];
         const expensesToUpdate: { id: string, participant_ids: string[] }[] = [];
@@ -246,7 +249,12 @@ export const TripService = {
             .delete()
             .match({ trip_id: tripId, user_id: memberId });
 
-        return !memberError;
+        if (memberError) {
+            console.error('Error deleting member from DB:', memberError);
+            return false;
+        }
+
+        return true;
     },
 
     subscribeToTrip(tripId: string, onUpdate: () => void) {
