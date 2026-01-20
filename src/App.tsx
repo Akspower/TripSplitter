@@ -8,14 +8,18 @@ import { IdentificationIcon, SparklesIcon } from '@heroicons/react/24/outline'; 
 import Header from './components/Header';
 import TripSetup from './components/TripSetup';
 import TripJoin from './components/TripJoin';
-import Dashboard from './components/Dashboard';
-import ExpenseForm from './components/ExpenseForm';
+import ConfirmDialog from './components/ui/ConfirmDialog';
 
 export default function App() {
   const [currentTrip, setCurrentTrip] = useState<Trip | null>(null);
   const [myId, setMyId] = useState<string>('');
   const [viewMode, setViewMode] = useState<'landing' | 'create' | 'join'>('landing');
   const [initialTripId, setInitialTripId] = useState<string>('');
+
+  // Custom Confirm Modal State
+  const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; title: string; message: string; onConfirm: () => void; isDestructive?: boolean }>({
+    isOpen: false, title: '', message: '', onConfirm: () => { }, isDestructive: false
+  });
 
   // Check for Deep Link on mount
   useEffect(() => {
@@ -126,10 +130,21 @@ export default function App() {
   };
 
   const handleDeleteTrip = async () => {
-    if (currentTrip && confirm("Are you sure you want to delete this trip for everyone? This cannot be undone.")) {
-      await TripService.deleteTrip(currentTrip.id);
-      handleReset();
-    }
+    if (!currentTrip) return;
+
+    setConfirmModal({
+      isOpen: true,
+      title: 'Delete Entire Trip?',
+      message: 'Are you sure you want to delete this trip for everyone? This cannot be undone.',
+      isDestructive: true,
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        const toastId = toast.loading('Deleting trip...');
+        await TripService.deleteTrip(currentTrip.id);
+        toast.success('Trip deleted successfully', { id: toastId });
+        handleReset();
+      }
+    });
   }
 
   const handleAddExpense = async (e: Expense) => {
@@ -211,6 +226,14 @@ export default function App() {
   return (
     <div className="min-h-[100dvh] bg-slate-50 selection:bg-indigo-100 selection:text-indigo-900 font-sans relative overflow-hidden flex flex-col">
       <Toaster position="top-center" toastOptions={{ className: 'font-bold rounded-2xl shadow-xl', duration: 3000 }} />
+      <ConfirmDialog
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        isDestructive={confirmModal.isDestructive}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+      />
       <Header key={`header-${viewMode}`} onReset={handleReset} tripId={currentTrip ? (currentTrip as Trip).id : undefined} />
 
       <div className="flex-1 flex flex-col justify-center items-center px-6 relative z-10 pb-20">
