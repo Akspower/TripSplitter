@@ -4,7 +4,7 @@ import { TripService } from '../services/tripService';
 import type { Trip, Member, TripStyle, BudgetType, AgeGroup } from '../types';
 import { getAvatarColor } from './MemberAvatar';
 
-const TripSetup: React.FC<{ onComplete: (trip: Trip, myId: string) => void }> = ({ onComplete }) => {
+const TripSetup: React.FC<{ onComplete: (trip: Trip, myId: string) => void, onBack: () => void }> = ({ onComplete, onBack }) => {
     const [step, setStep] = useState(1);
     const [creatorName, setCreatorName] = useState('');
     const [formData, setFormData] = useState({ name: '', destination: '', startDate: '', endDate: '' });
@@ -18,26 +18,55 @@ const TripSetup: React.FC<{ onComplete: (trip: Trip, myId: string) => void }> = 
     const [budgetType, setBudgetType] = useState<BudgetType>('moderate');
     const [ageGroup, setAgeGroup] = useState<AgeGroup>('mixed');
 
-    // Persistence Logic
+    // History API Integration for Hardware Back Button
+    React.useEffect(() => {
+        // Push state when component mounts or step changes
+        window.history.pushState({ step }, `Step ${step}`, window.location.search);
+
+        const handlePopState = (event: PopStateEvent) => {
+            if (event.state && event.state.step) {
+                // If we have state history, go to that step
+                if (event.state.step < step) {
+                    setStep(event.state.step);
+                }
+            } else {
+                // If popping to initial state/outside, let's treat as "Back" from Step 1
+                if (step === 1) {
+                    onBack();
+                } else {
+                    setStep(step - 1);
+                }
+            }
+        };
+
+        window.addEventListener('popstate', handlePopState);
+        return () => window.removeEventListener('popstate', handlePopState);
+    }, [step, onBack]);
+
+    // Persistence Logic: Load
     React.useEffect(() => {
         const savedState = localStorage.getItem('trip_setup_state');
         if (savedState) {
             try {
                 const parsed = JSON.parse(savedState);
-                setStep(parsed.step || 1);
-                setCreatorName(parsed.creatorName || '');
-                setFormData(parsed.formData || { name: '', destination: '', startDate: '', endDate: '' });
-                setMembers(parsed.members || []);
-                setAdminPin(parsed.adminPin || '');
-                setTripStyle(parsed.tripStyle || 'adventure');
-                setBudgetType(parsed.budgetType || 'moderate');
-                setAgeGroup(parsed.ageGroup || 'mixed');
+                // Only restore if we are at step 1 (initial load) to avoid overwriting during navigation
+                if (step === 1) {
+                    if (parsed.step) setStep(parsed.step);
+                    if (parsed.creatorName) setCreatorName(parsed.creatorName);
+                    if (parsed.formData) setFormData(parsed.formData);
+                    if (parsed.members) setMembers(parsed.members);
+                    if (parsed.adminPin) setAdminPin(parsed.adminPin);
+                    if (parsed.tripStyle) setTripStyle(parsed.tripStyle);
+                    if (parsed.budgetType) setBudgetType(parsed.budgetType);
+                    if (parsed.ageGroup) setAgeGroup(parsed.ageGroup);
+                }
             } catch (e) {
                 console.error("Failed to load saved state", e);
             }
         }
     }, []);
 
+    // Persistence Logic: Save
     React.useEffect(() => {
         const state = { step, creatorName, formData, members, adminPin, tripStyle, budgetType, ageGroup };
         localStorage.setItem('trip_setup_state', JSON.stringify(state));
@@ -85,7 +114,19 @@ const TripSetup: React.FC<{ onComplete: (trip: Trip, myId: string) => void }> = 
     };
 
     return (
-        <div className="max-w-md mx-auto p-4 sm:p-8 mt-6 w-full">
+        <div className="max-w-md mx-auto p-4 sm:p-8 mt-6 w-full relative">
+            {/* Close / Cancel Button */}
+            <button
+                onClick={() => {
+                    localStorage.removeItem('trip_setup_state');
+                    onBack();
+                }}
+                className="absolute top-4 right-4 p-2 text-slate-300 hover:text-slate-500 transition-colors rounded-full hover:bg-slate-100"
+            >
+                <TrashIcon className="w-6 h-6" />
+                <span className="sr-only">Cancel Setup</span>
+            </button>
+
             <div className="flex justify-between gap-4 mb-16">
                 {[1, 2, 3, 4].map((s) => (
                     <div key={s} className={`h-1.5 rounded-full flex-1 transition-all duration-700 ${step >= s ? 'bg-slate-900 shadow-lg' : 'bg-slate-200'}`} />

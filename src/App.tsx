@@ -87,6 +87,10 @@ export default function App() {
       // 2. Fetch fresh data from server
       loadTrip(savedTripId, !!cachedTripJson); // Silent if we have cache
     } else {
+      // If no active trip, check if we were creating one (persisted state)
+      if (localStorage.getItem('trip_setup_state')) {
+        setViewMode('create');
+      }
       setLoadingTrip(false);
     }
   }, []);
@@ -282,7 +286,14 @@ export default function App() {
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-8">
               <button
-                onClick={() => setViewMode('create')}
+                onClick={() => {
+                  const handleStartCreation = () => {
+                    // User explicitly wants a new trip, so clear any old drafts
+                    localStorage.removeItem('trip_setup_state');
+                    setViewMode('create');
+                  };
+                  handleStartCreation();
+                }}
                 className="w-full sm:w-auto bg-slate-900 text-white px-10 py-6 rounded-[28px] font-black text-xl shadow-2xl shadow-slate-200 hover:scale-105 transition-transform active:scale-95 flex items-center justify-center gap-3"
               >
                 <SparklesIcon className="w-6 h-6 text-indigo-400" />
@@ -300,10 +311,10 @@ export default function App() {
         )}
 
         {viewMode === 'create' && (
-          <>
-            <button onClick={() => setViewMode('landing')} className="absolute top-24 left-6 sm:left-10 text-slate-400 font-bold hover:text-slate-800 transition-colors">← Back</button>
-            <TripSetup onComplete={handleCreateOrJoin} />
-          </>
+          <TripSetup
+            onComplete={handleCreateOrJoin}
+            onBack={() => setViewMode('landing')}
+          />
         )}
 
         {viewMode === 'join' && (
