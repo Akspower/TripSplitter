@@ -7,7 +7,7 @@ const ExpenseForm: React.FC<{ members: Member[], onAdd: (e: Expense) => void, on
     const [desc, setDesc] = useState('');
     const [amount, setAmount] = useState('');
     const [category, setCategory] = useState<ExpenseCategory>('Food');
-    const [payerId, setPayerId] = useState(members[0]?.id || '');
+    const [payerId, setPayerId] = useState(''); // Default to empty
     const [participantIds, setParticipantIds] = useState<string[]>(members.map(m => m.id));
     const [saving, setSaving] = useState(false);
 
@@ -36,6 +36,15 @@ const ExpenseForm: React.FC<{ members: Member[], onAdd: (e: Expense) => void, on
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         const numAmount = parseFloat(amount);
+
+        // Validation: Payer must be selected
+        if (!payerId) {
+            toast.error("Who paid? Please select a person.", {
+                icon: '🤔',
+                style: { borderRadius: '20px', background: '#333', color: '#fff' }
+            });
+            return;
+        }
 
         if (splitType === 'EXACT') {
             if (Math.abs(currentSplitSum - numAmount) > 0.5) {
@@ -114,11 +123,17 @@ const ExpenseForm: React.FC<{ members: Member[], onAdd: (e: Expense) => void, on
                         </div>
 
                         <div>
-                            <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3">Who Footed the Bill?</label>
+                            <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3">Who Footed the Bill? <span className="text-rose-500">*</span></label>
                             <div className="flex gap-2 overflow-x-auto py-2 no-scrollbar">
                                 {members.map(m => (
-                                    <button key={m.id} type="button" onClick={() => setPayerId(m.id)} className={`shrink-0 px-6 py-3 rounded-2xl text-sm font-black transition-all ${payerId === m.id ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-100 scale-105' : 'bg-slate-100 text-slate-500'}`}>
+                                    <button
+                                        key={m.id}
+                                        type="button"
+                                        onClick={() => setPayerId(m.id)}
+                                        className={`shrink-0 px-5 py-3 rounded-2xl text-sm font-black transition-all border-2 ${payerId === m.id ? 'bg-slate-900 border-slate-900 text-white shadow-xl scale-105' : 'bg-white border-slate-100 text-slate-400 hover:border-slate-300'}`}
+                                    >
                                         {m.name}
+                                        {payerId === m.id && <span className="ml-2">✓</span>}
                                     </button>
                                 ))}
                             </div>

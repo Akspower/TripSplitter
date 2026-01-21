@@ -256,35 +256,40 @@ const Dashboard: React.FC<{ trip: Trip, myId: string, onAddExpense: () => void, 
                                                     {/* Fallback */}
                                                     {!['Food', 'Drink', 'Alcohol', 'Cab/Taxi', 'Train/Bus/Flight', 'Hotel/Stay', 'Trekking Gear', 'Entry Fee', 'Shopping', 'Other'].includes(e.category) && '🧾'}
                                                 </div>
-                                                <div>
-                                                    <h4 className="font-black text-slate-900 text-lg tracking-tight leading-none mb-1 break-words line-clamp-2">{e.description}</h4>
+                                                <div className="min-w-0 flex-1">
+                                                    <h4 className="font-black text-slate-900 text-lg tracking-tight leading-snug mb-1 break-words">{e.description}</h4>
                                                     <p className="text-[10px] font-bold text-slate-400 mb-2">{new Date(e.date).toLocaleDateString('en-IN', { weekday: 'short', hour: '2-digit', minute: '2-digit' })}</p>
-                                                    <div className="flex flex-wrap items-center gap-2">
-                                                        <span className={`text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest ${e.payerId === myId ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200' : 'bg-slate-100 text-slate-500'}`}>
-                                                            {e.payerId === myId ? 'You Paid' : optimisticTrip.members.find(m => m.id === e.payerId)?.name || 'Unknown'}
+                                                    <div className="flex flex-wrap items-center gap-2 mt-2">
+                                                        <span className={`text-[10px] font-black px-3 py-1.5 rounded-lg uppercase tracking-widest border ${e.payerId === myId ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white text-slate-500 border-slate-200'}`}>
+                                                            {e.payerId === myId ? 'You Paid' : `${optimisticTrip.members.find(m => m.id === e.payerId)?.name || 'Unknown'} Paid`}
                                                         </span>
-                                                        {!((e.splitType === 'EXACT' && (e.splitDetails?.[myId] || 0) > 0) || (e.splitType !== 'EXACT' && e.participantIds.includes(myId))) && (
-                                                            <span className="text-[9px] font-black bg-rose-50 text-rose-500 px-3 py-1 rounded-full uppercase tracking-widest">Not For You</span>
-                                                        )}
-                                                        {((e.splitType === 'EXACT' && (e.splitDetails?.[myId] || 0) > 0) || (e.splitType !== 'EXACT' && e.participantIds.includes(myId))) && (
-                                                            <span className="text-[9px] font-black bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full uppercase tracking-widest">In Your share</span>
-                                                        )}
-                                                        {e.splitType === 'EXACT' && (
-                                                            <span className="text-[9px] font-black bg-amber-50 text-amber-600 px-3 py-1 rounded-full uppercase tracking-widest flex items-center gap-1">
+
+                                                        {e.splitType === 'EXACT' ? (
+                                                            <span className="text-[10px] font-black bg-amber-50 text-amber-600 px-3 py-1.5 rounded-lg uppercase tracking-widest border border-amber-100 flex items-center gap-1">
                                                                 ⚡ Custom Split
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-[10px] font-black bg-slate-50 text-slate-400 px-3 py-1.5 rounded-lg uppercase tracking-widest border border-slate-100">
+                                                                Equal Share
+                                                            </span>
+                                                        )}
+
+                                                        {((e.splitType === 'EXACT' && (e.splitDetails?.[myId] || 0) > 0) || (e.splitType !== 'EXACT' && e.participantIds.includes(myId))) && (
+                                                            <span className="text-[10px] font-black bg-emerald-50 text-emerald-600 px-3 py-1.5 rounded-lg uppercase tracking-widest border border-emerald-100">
+                                                                Your Share
                                                             </span>
                                                         )}
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-5 mt-4 sm:mt-0 w-full sm:w-auto justify-between sm:justify-end">
-                                                <div className="text-right">
-                                                    <span className="block text-2xl font-black text-slate-900">{formatINR(e.amount)}</span>
+                                            <div className="flex items-center gap-4 mt-5 sm:mt-0 w-full sm:w-auto justify-between sm:justify-end border-t sm:border-0 border-slate-50 pt-4 sm:pt-0">
+                                                <div className="text-right min-w-0 flex-1 sm:flex-none">
+                                                    <span className="block text-2xl font-black text-slate-900 truncate">{formatINR(e.amount)}</span>
                                                     {e.participantIds.includes(myId) && (
-                                                        <span className="text-[11px] text-indigo-500 font-black block mt-1">
+                                                        <span className="text-[11px] text-indigo-500 font-bold block mt-0.5 truncate uppercase tracking-wide">
                                                             {e.splitType === 'EXACT' && e.splitDetails
-                                                                ? `You pay ₹${(e.splitDetails[myId] || 0).toFixed(0)}`
-                                                                : `₹${(e.amount / e.participantIds.length).toFixed(0)} / person`
+                                                                ? `You pay ${formatINR(e.splitDetails[myId] || 0)}`
+                                                                : `${formatINR(e.amount / e.participantIds.length)} / person`
                                                             }
                                                         </span>
                                                     )}

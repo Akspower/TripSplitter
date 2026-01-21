@@ -18,6 +18,31 @@ const TripSetup: React.FC<{ onComplete: (trip: Trip, myId: string) => void }> = 
     const [budgetType, setBudgetType] = useState<BudgetType>('moderate');
     const [ageGroup, setAgeGroup] = useState<AgeGroup>('mixed');
 
+    // Persistence Logic
+    React.useEffect(() => {
+        const savedState = localStorage.getItem('trip_setup_state');
+        if (savedState) {
+            try {
+                const parsed = JSON.parse(savedState);
+                setStep(parsed.step || 1);
+                setCreatorName(parsed.creatorName || '');
+                setFormData(parsed.formData || { name: '', destination: '', startDate: '', endDate: '' });
+                setMembers(parsed.members || []);
+                setAdminPin(parsed.adminPin || '');
+                setTripStyle(parsed.tripStyle || 'adventure');
+                setBudgetType(parsed.budgetType || 'moderate');
+                setAgeGroup(parsed.ageGroup || 'mixed');
+            } catch (e) {
+                console.error("Failed to load saved state", e);
+            }
+        }
+    }, []);
+
+    React.useEffect(() => {
+        const state = { step, creatorName, formData, members, adminPin, tripStyle, budgetType, ageGroup };
+        localStorage.setItem('trip_setup_state', JSON.stringify(state));
+    }, [step, creatorName, formData, members, adminPin, tripStyle, budgetType, ageGroup]);
+
     const addMember = () => {
         if (newMember.trim()) {
             setMembers([...members, { id: Math.random().toString(36).substr(2, 9), name: newMember.trim() }]);
@@ -51,6 +76,7 @@ const TripSetup: React.FC<{ onComplete: (trip: Trip, myId: string) => void }> = 
         const result = await TripService.createTrip(newTrip);
 
         if (result.success) {
+            localStorage.removeItem('trip_setup_state');
             onComplete(newTrip, creatorId);
         } else {
             alert(`Failed to create trip: ${result.error || "Unknown error"}. Please check your connection or try again.`);
