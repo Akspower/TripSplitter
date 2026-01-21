@@ -236,6 +236,7 @@ export default function App() {
           isOffline={isOffline}
           isCreator={currentTrip.creatorId === myId}
           onDelete={currentTrip.creatorId === myId ? handleDeleteTrip : undefined}
+          showLogout={true}
         />
 
         <Dashboard

@@ -13,6 +13,7 @@ interface HeaderProps {
     isCreator?: boolean;
     tripId?: string;
     userName?: string;
+    showLogout?: boolean;
 }
 
 const formatDateRange = (start?: string, end?: string) => {
@@ -23,7 +24,7 @@ const formatDateRange = (start?: string, end?: string) => {
     return `${s.toLocaleDateString('en-IN', opts)} - ${e.toLocaleDateString('en-IN', { ...opts, year: 'numeric' })}`;
 };
 
-const Header: React.FC<HeaderProps> = ({ tripName, destination, startDate, endDate, onReset, onDelete, isSyncing, isOffline, isCreator, tripId, userName }) => {
+const Header: React.FC<HeaderProps> = ({ tripName, destination, startDate, endDate, onReset, onDelete, isSyncing, isOffline, isCreator, tripId, userName, showLogout }) => {
     const [showExitConfirm, setShowExitConfirm] = useState(false);
 
     return (
@@ -117,12 +118,13 @@ const Header: React.FC<HeaderProps> = ({ tripName, destination, startDate, endDa
                         </svg>
                     </button>
 
-                    {tripId && (
+                    {/* Show Logout if tripId is present OR if showLogout is true */}
+                    {(tripId || showLogout) && (
                         <button
                             onClick={() => setShowExitConfirm(true)}
                             className="p-2 text-slate-400 hover:text-slate-900 font-bold text-[10px] md:text-xs uppercase tracking-widest bg-slate-50 rounded-lg md:bg-transparent md:p-2"
                         >
-                            Exit
+                            Logout
                         </button>
                     )}
 
