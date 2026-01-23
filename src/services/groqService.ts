@@ -29,7 +29,7 @@ const generateWithRetry = async (prompt: string, maxRetries = 3): Promise<string
                         content: prompt
                     }
                 ],
-                model: "mixtral-8x7b-32768", // Switching to Mixtral for better stability
+                model: "llama-3.3-70b-versatile", // Switched to Llama 3.3 for better availability
                 temperature: 0.7, // Slightly lower for more reliable output
                 max_tokens: 1024,
             });
@@ -107,7 +107,8 @@ export const getTripInsights = async (trip: Trip) => {
 ${fallbackTips}
 
 ---
-_Note: Our AI guide is taking a chai break (Server Issues). Showing offline tips!_
+---
+_Note: AI Guide is offline. Error: ${error.message || 'Unknown Error'} (Status: ${error.status || 'N/A'})_
         `;
     }
 };
