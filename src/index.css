@@ -7,28 +7,30 @@
     }
 
     body {
-        background-color: #f8fafc;
+        /* Universal balanced background - works day/night */
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
         min-height: 100dvh;
         overscroll-behavior-y: none;
+        color: #e2e8f0;
     }
 
-    /* Custom Scrollbar for Chrome/Safari/Edge */
+    /* Custom Scrollbar - Subtle and elegant */
     ::-webkit-scrollbar {
         width: 6px;
         height: 6px;
     }
 
     ::-webkit-scrollbar-track {
-        background: transparent;
+        background: rgba(15, 23, 42, 0.3);
     }
 
     ::-webkit-scrollbar-thumb {
-        background: #cbd5e1;
+        background: rgba(99, 102, 241, 0.4);
         border-radius: 99px;
     }
 
     ::-webkit-scrollbar-thumb:hover {
-        background: #94a3b8;
+        background: rgba(99, 102, 241, 0.6);
     }
 
     /* Hide scrollbar utility */
@@ -43,11 +45,49 @@
 }
 
 @layer utilities {
+
+    /* Glassmorphism - Modern elevated look */
     .glass {
-        @apply bg-white/70 backdrop-blur-lg border-b border-white/20;
+        background: rgba(30, 41, 59, 0.7);
+        backdrop-filter: blur(16px);
+        border: 1px solid rgba(148, 163, 184, 0.1);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
     }
 
+    /* 3D Card effect - Lightweight CSS only */
     .card-3d {
-        @apply transition-transform duration-300 hover:scale-[1.02] hover:shadow-2xl;
+        background: linear-gradient(145deg, #1e293b, #0f172a);
+        box-shadow:
+            0 10px 30px rgba(0, 0, 0, 0.5),
+            inset 0 1px 0 rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(148, 163, 184, 0.1);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .card-3d:hover {
+        transform: translateY(-4px) scale(1.01);
+        box-shadow:
+            0 20px 40px rgba(99, 102, 241, 0.2),
+            0 10px 30px rgba(0, 0, 0, 0.6),
+            inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+
+    /* Sync indicator pulse */
+    @keyframes sync-pulse {
+
+        0%,
+        100% {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        50% {
+            opacity: 0.6;
+            transform: scale(1.2);
+        }
+    }
+
+    .sync-dot {
+        animation: sync-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
     }
 }
