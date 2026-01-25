@@ -224,7 +224,7 @@ export default function App() {
 
   if (loadingTrip) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
         <div className="w-full max-w-md space-y-8 animate-pulse">
           <div className="flex justify-center">
             <Skeleton className="w-20 h-20 rounded-full" />
@@ -244,7 +244,7 @@ export default function App() {
 
   if (currentTrip) {
     return (
-      <div className="min-h-[100dvh] font-sans">
+      <div className="min-h-[100dvh] bg-slate-50 selection:bg-indigo-100 selection:text-indigo-900 font-sans">
         {/* Global Confirm Dialog for Active Trip View */}
         <ConfirmDialog
           isOpen={confirmModal.isOpen}
@@ -320,13 +320,13 @@ export default function App() {
             >
               <div className="relative inline-block">
                 <div className="absolute inset-0 bg-indigo-500 blur-[80px] opacity-20"></div>
-                <h1 className="text-6xl sm:text-8xl font-black text-white tracking-tighter mb-6 relative">
-                  Split<span className="text-indigo-400">Way</span>
+                <h1 className="text-6xl sm:text-8xl font-black text-slate-900 tracking-tighter mb-6 relative">
+                  Split<span className="text-indigo-600">Way</span>
                 </h1>
               </div>
-              <p className="text-xl sm:text-2xl font-bold text-slate-300 max-w-2xl mx-auto leading-relaxed">
+              <p className="text-xl sm:text-2xl font-bold text-slate-400 max-w-2xl mx-auto leading-relaxed">
                 The modern way to travel with friends. <br />
-                <span className="text-indigo-300">Real-time splits. AI Suggestions. Zero drama.</span>
+                <span className="text-indigo-500">Real-time splits. AI Suggestions. Zero drama.</span>
               </p>
 
               <div className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-8">
@@ -339,16 +339,16 @@ export default function App() {
                     };
                     handleStartCreation();
                   }}
-                  className="w-full sm:w-auto bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-10 py-6 rounded-[28px] font-black text-xl shadow-2xl shadow-indigo-900/50 hover:scale-105 hover:shadow-indigo-500/50 transition-all active:scale-95 flex items-center justify-center gap-3"
+                  className="w-full sm:w-auto bg-slate-900 text-white px-10 py-6 rounded-[28px] font-black text-xl shadow-2xl shadow-slate-200 hover:scale-105 transition-transform active:scale-95 flex items-center justify-center gap-3"
                 >
-                  <SparklesIcon className="w-6 h-6" />
+                  <SparklesIcon className="w-6 h-6 text-indigo-400" />
                   Plan New Trip
                 </button>
                 <button
                   onClick={() => setViewMode('join')}
-                  className="w-full sm:w-auto glass text-white px-10 py-6 rounded-[28px] font-black text-xl hover:scale-105 transition-all active:scale-95 flex items-center justify-center gap-3"
+                  className="w-full sm:w-auto bg-white text-slate-900 px-10 py-6 rounded-[28px] font-black text-xl shadow-xl border border-white hover:border-indigo-100 hover:shadow-2xl transition-all active:scale-95 flex items-center justify-center gap-3"
                 >
-                  <IdentificationIcon className="w-6 h-6" />
+                  <IdentificationIcon className="w-6 h-6 text-slate-400" />
                   Join Existing
                 </button>
               </div>

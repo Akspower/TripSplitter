@@ -156,11 +156,10 @@ const Dashboard: React.FC<{
         }
     }, [trip.expenses.length]);
 
-    const getUPILink = (payeeName: string, amount: number) => {
-        // Round to whole number - many UPI apps don't handle decimals well
-        const roundedAmount = Math.round(amount);
-        // Generic UPI link - user will select contact in their UPI app
-        return `upi://pay?pa=&pn=${encodeURIComponent(payeeName)}&am=${roundedAmount}&cu=INR&tn=${encodeURIComponent(`Settlement for ${trip.name}`)}`;
+    const getUPILink = () => {
+        // Simple UPI link - just opens UPI app, user picks contact & enters amount manually
+        // This is more reliable than trying to pre-fill data
+        return `upi://pay`;
     };
 
     return (
@@ -414,7 +413,7 @@ const Dashboard: React.FC<{
 
                                                         {d.from === myId && (
                                                             <a
-                                                                href={getUPILink(optimisticTrip.members.find(m => m.id === d.to)?.name || '', d.amount)}
+                                                                href={getUPILink()}
                                                                 className="bg-slate-900 text-white text-[10px] font-bold px-4 py-2 rounded-full uppercase tracking-widest hover:bg-indigo-600 transition-colors flex items-center gap-1"
                                                             >
                                                                 Pay Now <ArrowRightIcon className="w-3 h-3" />
