@@ -138,6 +138,27 @@ export const TripService = {
 
 
 
+    async updateExpense(tripId: string, expense: Expense): Promise<{ success: boolean, error?: string }> {
+        const { error } = await supabase.from('expenses').update({
+            description: expense.description,
+            amount: expense.amount,
+            date: expense.date,
+            category: expense.category,
+            payer_id: expense.payerId,
+            participant_ids: expense.participantIds,
+            // @ts-ignore
+            split_type: expense.splitType || 'EQUAL',
+            // @ts-ignore
+            split_details: expense.splitDetails || {}
+        }).eq('id', expense.id);
+
+        if (error) {
+            // console.error('Error updating expense:', error);
+            return { success: false, error: error.message };
+        }
+        return { success: true };
+    },
+
     async addExpense(tripId: string, expense: Expense): Promise<{ success: boolean, error?: string }> {
         // Generate a simple ID if one isn't provided (schema demands text id)
         const expenseId = expense.id || Math.random().toString(36).substr(2, 9);

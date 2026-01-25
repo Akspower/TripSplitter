@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CurrencyRupeeIcon, MapPinIcon, TrashIcon, CalendarDaysIcon, ArrowLeftOnRectangleIcon } from '@heroicons/react/24/outline';
+import { CurrencyRupeeIcon, MapPinIcon, TrashIcon, CalendarDaysIcon, ArrowLeftOnRectangleIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 
 interface HeaderProps {
     tripName?: string;
@@ -14,6 +14,7 @@ interface HeaderProps {
     tripId?: string;
     userName?: string;
     showLogout?: boolean;
+    onExportPDF?: () => void;
 }
 
 const formatDateRange = (start?: string, end?: string) => {
@@ -24,7 +25,7 @@ const formatDateRange = (start?: string, end?: string) => {
     return `${s.toLocaleDateString('en-IN', opts)} - ${e.toLocaleDateString('en-IN', { ...opts, year: 'numeric' })}`;
 };
 
-const Header: React.FC<HeaderProps> = ({ tripName, destination, startDate, endDate, onReset, onDelete, isSyncing, isOffline, isCreator, tripId, userName, showLogout }) => {
+const Header: React.FC<HeaderProps> = ({ tripName, destination, startDate, endDate, onReset, onDelete, isSyncing, isOffline, isCreator, tripId, userName, showLogout, onExportPDF }) => {
     const [showExitConfirm, setShowExitConfirm] = useState(false);
 
     return (
@@ -91,6 +92,16 @@ const Header: React.FC<HeaderProps> = ({ tripName, destination, startDate, endDa
                                 </div>
                             )}
                         </div>
+                    )}
+
+                    {onExportPDF && tripId && (
+                        <button
+                            onClick={onExportPDF}
+                            className="p-2 text-indigo-400 hover:text-indigo-600 font-bold transition-colors"
+                            title="Export PDF"
+                        >
+                            <ArrowDownTrayIcon className="w-5 h-5" />
+                        </button>
                     )}
 
                     <button

@@ -1,21 +1,31 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { BanknotesIcon, UsersIcon, SparklesIcon, ArrowRightIcon, ArrowPathIcon, TrashIcon, HandThumbUpIcon, PlusIcon, ChartBarIcon, Cog6ToothIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { BanknotesIcon, UsersIcon, SparklesIcon, ArrowRightIcon, ArrowPathIcon, TrashIcon, HandThumbUpIcon, PlusIcon, ChartBarIcon, Cog6ToothIcon, XMarkIcon, PencilIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { calculateDebts } from '../utils/debtCalculator';
 import { getTripInsights } from '../services/groqService';
 import { formatINR } from '../utils/formatters';
-import type { Trip } from '../types';
+import type { Trip, Expense } from '../types';
 import Analytics from './Analytics';
 import { TripService } from '../services/tripService';
 
 import toast from 'react-hot-toast';
 import ConfirmDialog from './ui/ConfirmDialog';
+import { vibrate, HapticPatterns } from '../utils/haptics';
 
 
-const Dashboard: React.FC<{ trip: Trip, myId: string, onAddExpense: () => void, onDeleteExpense: (id: string) => void, onRefreshTrip: () => void }> = ({ trip, myId, onAddExpense, onDeleteExpense, onRefreshTrip }) => {
+const Dashboard: React.FC<{
+    trip: Trip,
+    myId: string,
+    onAddExpense: () => void,
+    onEditExpense: (e: Expense) => void,
+    onDeleteExpense: (id: string) => void,
+    onRefreshTrip: () => void
+}> = ({ trip, myId, onAddExpense, onEditExpense, onDeleteExpense, onRefreshTrip }) => {
+
     const [activeTab, setActiveTab] = useState<'expenses' | 'summary' | 'insights' | 'analytics'>('expenses');
     const [insights, setInsights] = useState<string | null>(null);
     const [loadingInsights, setLoadingInsights] = useState(false);
     const [showManageTeam, setShowManageTeam] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
 
     // Optimistic UI state for deleted members
     const [hiddenMemberIds, setHiddenMemberIds] = useState<Set<string>>(new Set());
@@ -148,8 +158,6 @@ const Dashboard: React.FC<{ trip: Trip, myId: string, onAddExpense: () => void, 
 
     const getUPILink = (payeeName: string, amount: number) => {
         // This is a generic intent link. In a real app, you'd store the user's UPI ID.
-        // For now, we leave the PA (Payee Address) empty so the user can fill it, or use a placeholder.
-        // Or we can prompt the user to ask their friend for their UPI ID.
         return `upi://pay?pa=&pn=${encodeURIComponent(payeeName)}&am=${amount}&cu=INR&tn=${encodeURIComponent(`Settlement for ${trip.name}`)}`;
     };
 
@@ -163,7 +171,7 @@ const Dashboard: React.FC<{ trip: Trip, myId: string, onAddExpense: () => void, 
                 onConfirm={confirmModal.onConfirm}
                 onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
             />
-            {/* ... Rest of JSX ... */}
+
             <div className="lg:grid lg:grid-cols-12 lg:gap-10 lg:items-start">
                 {/* Left Column - Net Standing */}
                 <div className="lg:col-span-5 space-y-6 mb-12 lg:mb-0 lg:sticky lg:top-28">
@@ -230,6 +238,21 @@ const Dashboard: React.FC<{ trip: Trip, myId: string, onAddExpense: () => void, 
 
                         {activeTab === 'expenses' && (
                             <div className="space-y-4">
+
+                                {/* Search Bar */}
+                                {optimisticTrip.expenses.length > 0 && (
+                                    <div className="relative mb-6">
+                                        <MagnifyingGlassIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                                        <input
+                                            type="text"
+                                            placeholder="Search expenses..."
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                            className="w-full bg-white pl-12 pr-4 py-4 rounded-[24px] border border-slate-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-bold text-slate-700 placeholder:text-slate-400"
+                                        />
+                                    </div>
+                                )}
+
                                 {optimisticTrip.expenses.length === 0 ? (
                                     <div className="text-center py-32 bg-white/40 rounded-[48px] border-4 border-dashed border-slate-200">
                                         <div className="bg-slate-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -239,69 +262,87 @@ const Dashboard: React.FC<{ trip: Trip, myId: string, onAddExpense: () => void, 
                                         <button onClick={onAddExpense} className="text-indigo-600 font-black mt-3 text-sm uppercase tracking-[0.2em] hover:tracking-[0.3em] transition-all">Add First Bill</button>
                                     </div>
                                 ) : (
-                                    optimisticTrip.expenses.slice().reverse().map(e => (
-                                        <div key={e.id} className={`bg-white p-6 rounded-[40px] border border-white shadow-xl shadow-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between group card-3d ${!e.participantIds.includes(myId) ? 'opacity-40 grayscale-[0.8]' : ''}`}>
-                                            <div className="flex items-center gap-6 w-full sm:w-auto">
-                                                <div className="w-16 h-16 bg-slate-50 rounded-[28px] flex items-center justify-center text-3xl shadow-inner group-hover:bg-indigo-50 transition-colors shrink-0">
-                                                    {e.category === 'Food' && '🍛'}
-                                                    {e.category === 'Drink' && '🥤'}
-                                                    {e.category === 'Alcohol' && '🍺'}
-                                                    {e.category === 'Cab/Taxi' && '🚕'}
-                                                    {e.category === 'Train/Bus/Flight' && '✈️'}
-                                                    {e.category === 'Hotel/Stay' && '🏨'}
-                                                    {e.category === 'Trekking Gear' && '🥾'}
-                                                    {e.category === 'Entry Fee' && '🎟️'}
-                                                    {e.category === 'Shopping' && '🛍️'}
-                                                    {e.category === 'Other' && '📍'}
-                                                    {/* Fallback */}
-                                                    {!['Food', 'Drink', 'Alcohol', 'Cab/Taxi', 'Train/Bus/Flight', 'Hotel/Stay', 'Trekking Gear', 'Entry Fee', 'Shopping', 'Other'].includes(e.category) && '🧾'}
+                                    optimisticTrip.expenses
+                                        .filter(e =>
+                                            searchTerm === '' ||
+                                            e.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                            e.amount.toString().includes(searchTerm) ||
+                                            e.category.toLowerCase().includes(searchTerm.toLowerCase())
+                                        )
+                                        .slice().reverse().map(e => (
+                                            <div key={e.id} className={`bg-white p-6 rounded-[40px] border border-white shadow-xl shadow-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between group card-3d ${!e.participantIds.includes(myId) ? 'opacity-40 grayscale-[0.8]' : ''}`}>
+                                                <div className="flex items-center gap-6 w-full sm:w-auto">
+                                                    <div className="w-16 h-16 bg-slate-50 rounded-[28px] flex items-center justify-center text-3xl shadow-inner group-hover:bg-indigo-50 transition-colors shrink-0">
+                                                        {e.category === 'Food' && '🍛'}
+                                                        {e.category === 'Drink' && '🥤'}
+                                                        {e.category === 'Alcohol' && '🍺'}
+                                                        {e.category === 'Cab/Taxi' && '🚕'}
+                                                        {e.category === 'Train/Bus/Flight' && '✈️'}
+                                                        {e.category === 'Hotel/Stay' && '🏨'}
+                                                        {e.category === 'Trekking Gear' && '🥾'}
+                                                        {e.category === 'Entry Fee' && '🎟️'}
+                                                        {e.category === 'Shopping' && '🛍️'}
+                                                        {e.category === 'Other' && '📍'}
+                                                        {!['Food', 'Drink', 'Alcohol', 'Cab/Taxi', 'Train/Bus/Flight', 'Hotel/Stay', 'Trekking Gear', 'Entry Fee', 'Shopping', 'Other'].includes(e.category) && '🧾'}
+                                                    </div>
+                                                    <div className="min-w-0 flex-1">
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <h4 className="font-black text-slate-900 text-lg tracking-tight leading-snug break-words">{e.description}</h4>
+                                                            {/* EDIT ICON - Creator/Payer Only */}
+                                                            {(e.createdBy === myId || e.payerId === myId) && (
+                                                                <button
+                                                                    onClick={() => { vibrate(HapticPatterns.soft); onEditExpense(e); }}
+                                                                    className="p-1.5 text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-colors opacity-0 group-hover:opacity-100"
+                                                                    title="Edit Expense"
+                                                                >
+                                                                    <PencilIcon className="w-4 h-4" />
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                        <p className="text-[10px] font-bold text-slate-400 mb-2">{new Date(e.date).toLocaleDateString('en-IN', { weekday: 'short', hour: '2-digit', minute: '2-digit' })}</p>
+                                                        <div className="flex flex-wrap items-center gap-2 mt-2">
+                                                            <span className={`text-[10px] font-black px-3 py-1.5 rounded-lg uppercase tracking-widest border ${e.payerId === myId ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white text-slate-500 border-slate-200'}`}>
+                                                                {e.payerId === myId ? 'You Paid' : `${optimisticTrip.members.find(m => m.id === e.payerId)?.name || 'Unknown'} Paid`}
+                                                            </span>
+
+                                                            {e.splitType === 'EXACT' ? (
+                                                                <span className="text-[10px] font-black bg-amber-50 text-amber-600 px-3 py-1.5 rounded-lg uppercase tracking-widest border border-amber-100 flex items-center gap-1">
+                                                                    ⚡ Custom Split
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-[10px] font-black bg-slate-50 text-slate-400 px-3 py-1.5 rounded-lg uppercase tracking-widest border border-slate-100">
+                                                                    Equal Share
+                                                                </span>
+                                                            )}
+
+                                                            {((e.splitType === 'EXACT' && (e.splitDetails?.[myId] || 0) > 0) || (e.splitType !== 'EXACT' && e.participantIds.includes(myId))) && (
+                                                                <span className="text-[10px] font-black bg-emerald-50 text-emerald-600 px-3 py-1.5 rounded-lg uppercase tracking-widest border border-emerald-100">
+                                                                    Your Share
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                                <div className="min-w-0 flex-1">
-                                                    <h4 className="font-black text-slate-900 text-lg tracking-tight leading-snug mb-1 break-words">{e.description}</h4>
-                                                    <p className="text-[10px] font-bold text-slate-400 mb-2">{new Date(e.date).toLocaleDateString('en-IN', { weekday: 'short', hour: '2-digit', minute: '2-digit' })}</p>
-                                                    <div className="flex flex-wrap items-center gap-2 mt-2">
-                                                        <span className={`text-[10px] font-black px-3 py-1.5 rounded-lg uppercase tracking-widest border ${e.payerId === myId ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white text-slate-500 border-slate-200'}`}>
-                                                            {e.payerId === myId ? 'You Paid' : `${optimisticTrip.members.find(m => m.id === e.payerId)?.name || 'Unknown'} Paid`}
-                                                        </span>
-
-                                                        {e.splitType === 'EXACT' ? (
-                                                            <span className="text-[10px] font-black bg-amber-50 text-amber-600 px-3 py-1.5 rounded-lg uppercase tracking-widest border border-amber-100 flex items-center gap-1">
-                                                                ⚡ Custom Split
-                                                            </span>
-                                                        ) : (
-                                                            <span className="text-[10px] font-black bg-slate-50 text-slate-400 px-3 py-1.5 rounded-lg uppercase tracking-widest border border-slate-100">
-                                                                Equal Share
-                                                            </span>
-                                                        )}
-
-                                                        {((e.splitType === 'EXACT' && (e.splitDetails?.[myId] || 0) > 0) || (e.splitType !== 'EXACT' && e.participantIds.includes(myId))) && (
-                                                            <span className="text-[10px] font-black bg-emerald-50 text-emerald-600 px-3 py-1.5 rounded-lg uppercase tracking-widest border border-emerald-100">
-                                                                Your Share
+                                                <div className="flex items-center gap-4 mt-5 sm:mt-0 w-full sm:w-auto justify-between sm:justify-end border-t sm:border-0 border-slate-50 pt-4 sm:pt-0">
+                                                    <div className="text-right min-w-0 flex-1 sm:flex-none">
+                                                        <span className="block text-2xl font-black text-slate-900 truncate">{formatINR(e.amount)}</span>
+                                                        {e.participantIds.includes(myId) && (
+                                                            <span className="text-[11px] text-indigo-500 font-bold block mt-0.5 truncate uppercase tracking-wide">
+                                                                {e.splitType === 'EXACT' && e.splitDetails
+                                                                    ? `You pay ${formatINR(e.splitDetails[myId] || 0)}`
+                                                                    : `${formatINR(e.amount / e.participantIds.length)} / person`
+                                                                }
                                                             </span>
                                                         )}
                                                     </div>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-4 mt-5 sm:mt-0 w-full sm:w-auto justify-between sm:justify-end border-t sm:border-0 border-slate-50 pt-4 sm:pt-0">
-                                                <div className="text-right min-w-0 flex-1 sm:flex-none">
-                                                    <span className="block text-2xl font-black text-slate-900 truncate">{formatINR(e.amount)}</span>
-                                                    {e.participantIds.includes(myId) && (
-                                                        <span className="text-[11px] text-indigo-500 font-bold block mt-0.5 truncate uppercase tracking-wide">
-                                                            {e.splitType === 'EXACT' && e.splitDetails
-                                                                ? `You pay ${formatINR(e.splitDetails[myId] || 0)}`
-                                                                : `${formatINR(e.amount / e.participantIds.length)} / person`
-                                                            }
-                                                        </span>
+                                                    {(e.createdBy === myId || trip.creatorId === myId) && (
+                                                        <button onClick={() => { vibrate(HapticPatterns.warning); onDeleteExpense(e.id); }} className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity p-3 bg-rose-50 text-rose-400 rounded-2xl hover:bg-rose-500 hover:text-white">
+                                                            <TrashIcon className="w-5 h-5" />
+                                                        </button>
                                                     )}
                                                 </div>
-                                                {(e.createdBy === myId || trip.creatorId === myId) && (
-                                                    <button onClick={() => onDeleteExpense(e.id)} className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity p-3 bg-rose-50 text-rose-400 rounded-2xl hover:bg-rose-500 hover:text-white">
-                                                        <TrashIcon className="w-5 h-5" />
-                                                    </button>
-                                                )}
                                             </div>
-                                        </div>
-                                    ))
+                                        ))
                                 )}
                             </div>
                         )}

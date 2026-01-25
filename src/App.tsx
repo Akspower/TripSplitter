@@ -1,16 +1,20 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense, lazy } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import toast, { Toaster } from 'react-hot-toast';
 import type { Trip, Expense } from './types';
 import { TripService } from './services/tripService';
+import { PDFService } from './services/pdfService';
 import { IdentificationIcon, SparklesIcon } from '@heroicons/react/24/outline'; // Icons used in landing
 
-// Components
 import Header from './components/Header';
-import TripSetup from './components/TripSetup';
-import TripJoin from './components/TripJoin';
-import Dashboard from './components/Dashboard';
-import ExpenseForm from './components/ExpenseForm';
 import ConfirmDialog from './components/ui/ConfirmDialog';
+import Skeleton from './components/ui/Skeleton';
+
+// Lazy Load Heavy Components
+const Dashboard = lazy(() => import('./components/Dashboard'));
+const TripSetup = lazy(() => import('./components/TripSetup'));
+const TripJoin = lazy(() => import('./components/TripJoin'));
+const ExpenseForm = lazy(() => import('./components/ExpenseForm'));
 
 export default function App() {
   const [currentTrip, setCurrentTrip] = useState<Trip | null>(null);
@@ -33,6 +37,7 @@ export default function App() {
     }
   }, []);
   const [showAddExpense, setShowAddExpense] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [loadingTrip, setLoadingTrip] = useState(true);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
@@ -181,9 +186,22 @@ export default function App() {
     const result = await TripService.addExpense(currentTrip.id, expenseWithCreator);
     if (result.success) {
       setShowAddExpense(false);
+      setEditingExpense(null);
       // Trip update will come via subscription
     } else {
       toast.error(`Failed to add expense: ${result.error}`);
+    }
+  };
+
+  const handleUpdateExpense = async (e: Expense) => {
+    if (!currentTrip) return;
+    const result = await TripService.updateExpense(currentTrip.id, e);
+    if (result.success) {
+      toast.success("Expense updated!");
+      setShowAddExpense(false);
+      setEditingExpense(null);
+    } else {
+      toast.error(`Failed to update expense: ${result.error}`);
     }
   };
 
@@ -207,10 +225,19 @@ export default function App() {
 
   if (loadingTrip) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="animate-pulse flex flex-col items-center">
-          <div className="w-12 h-12 bg-indigo-200 rounded-full mb-4"></div>
-          <div className="h-4 w-32 bg-slate-200 rounded"></div>
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+        <div className="w-full max-w-md space-y-8 animate-pulse">
+          <div className="flex justify-center">
+            <Skeleton className="w-20 h-20 rounded-full" />
+          </div>
+          <div className="space-y-4">
+            <Skeleton className="h-12 w-3/4 mx-auto rounded-xl" />
+            <Skeleton className="h-4 w-1/2 mx-auto rounded-lg" />
+          </div>
+          <div className="space-y-3 pt-10">
+            <Skeleton className="h-16 w-full rounded-2xl" />
+            <Skeleton className="h-16 w-full rounded-2xl" />
+          </div>
         </div>
       </div>
     );
@@ -241,23 +268,35 @@ export default function App() {
           isCreator={currentTrip.creatorId === myId}
           onDelete={currentTrip.creatorId === myId ? handleDeleteTrip : undefined}
           showLogout={true}
+          onExportPDF={() => PDFService.generateTripReport(currentTrip)}
         />
 
-        <Dashboard
-          trip={currentTrip}
-          myId={myId}
-          onAddExpense={() => setShowAddExpense(true)}
-          onDeleteExpense={handleDeleteExpense}
-          onRefreshTrip={() => loadTrip(currentTrip.id)}
-        />
-
-        {showAddExpense && (
-          <ExpenseForm
-            members={currentTrip.members}
-            onAdd={handleAddExpense}
-            onCancel={() => setShowAddExpense(false)}
+        <Suspense fallback={
+          <div className="p-6 max-w-7xl mx-auto w-full space-y-8 animate-pulse">
+            <div className="flex gap-4 mb-10">
+              <Skeleton className="h-64 w-1/3 rounded-[40px]" />
+              <Skeleton className="h-64 w-2/3 rounded-[40px]" />
+            </div>
+          </div>
+        }>
+          <Dashboard
+            trip={currentTrip}
+            myId={myId}
+            onAddExpense={() => { setEditingExpense(null); setShowAddExpense(true); }}
+            onEditExpense={(e) => { setEditingExpense(e); setShowAddExpense(true); }}
+            onDeleteExpense={handleDeleteExpense}
+            onRefreshTrip={() => loadTrip(currentTrip.id)}
           />
-        )}
+
+          {showAddExpense && (
+            <ExpenseForm
+              members={currentTrip.members}
+              onAdd={editingExpense ? handleUpdateExpense : handleAddExpense}
+              onCancel={() => { setShowAddExpense(false); setEditingExpense(null); }}
+              initialData={editingExpense || undefined}
+            />
+          )}
+        </Suspense>
       </div>
     );
   }
@@ -269,57 +308,87 @@ export default function App() {
       <Header key={`header-${viewMode}`} onReset={handleReset} tripId={currentTrip ? (currentTrip as Trip).id : undefined} />
 
       <div className="flex-1 flex flex-col justify-center items-center px-6 relative z-10 pb-20">
+        <AnimatePresence mode='wait'>
+          {/* Hero Section */}
+          {viewMode === 'landing' && (
+            <motion.div
+              key="landing"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 1.05 }}
+              transition={{ duration: 0.5 }}
+              className="max-w-4xl mx-auto w-full text-center space-y-12"
+            >
+              <div className="relative inline-block">
+                <div className="absolute inset-0 bg-indigo-500 blur-[80px] opacity-20"></div>
+                <h1 className="text-6xl sm:text-8xl font-black text-slate-900 tracking-tighter mb-6 relative">
+                  Split<span className="text-indigo-600">Way</span>
+                </h1>
+              </div>
+              <p className="text-xl sm:text-2xl font-bold text-slate-400 max-w-2xl mx-auto leading-relaxed">
+                The modern way to travel with friends. <br />
+                <span className="text-indigo-500">Real-time splits. AI Suggestions. Zero drama.</span>
+              </p>
 
-        {/* Hero Section */}
-        {viewMode === 'landing' && (
-          <div className="max-w-4xl mx-auto w-full text-center space-y-12 animate-in fade-in zoom-in duration-700">
-            <div className="relative inline-block">
-              <div className="absolute inset-0 bg-indigo-500 blur-[80px] opacity-20"></div>
-              <h1 className="text-6xl sm:text-8xl font-black text-slate-900 tracking-tighter mb-6 relative">
-                Split<span className="text-indigo-600">Way</span>
-              </h1>
-            </div>
-            <p className="text-xl sm:text-2xl font-bold text-slate-400 max-w-2xl mx-auto leading-relaxed">
-              The modern way to travel with friends. <br />
-              <span className="text-indigo-500">Real-time splits. AI Suggestions. Zero drama.</span>
-            </p>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-8">
+                <button
+                  onClick={() => {
+                    const handleStartCreation = () => {
+                      // User explicitly wants a new trip, so clear any old drafts
+                      localStorage.removeItem('trip_setup_state');
+                      setViewMode('create');
+                    };
+                    handleStartCreation();
+                  }}
+                  className="w-full sm:w-auto bg-slate-900 text-white px-10 py-6 rounded-[28px] font-black text-xl shadow-2xl shadow-slate-200 hover:scale-105 transition-transform active:scale-95 flex items-center justify-center gap-3"
+                >
+                  <SparklesIcon className="w-6 h-6 text-indigo-400" />
+                  Plan New Trip
+                </button>
+                <button
+                  onClick={() => setViewMode('join')}
+                  className="w-full sm:w-auto bg-white text-slate-900 px-10 py-6 rounded-[28px] font-black text-xl shadow-xl border border-white hover:border-indigo-100 hover:shadow-2xl transition-all active:scale-95 flex items-center justify-center gap-3"
+                >
+                  <IdentificationIcon className="w-6 h-6 text-slate-400" />
+                  Join Existing
+                </button>
+              </div>
+            </motion.div>
+          )}
 
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-8">
-              <button
-                onClick={() => {
-                  const handleStartCreation = () => {
-                    // User explicitly wants a new trip, so clear any old drafts
-                    localStorage.removeItem('trip_setup_state');
-                    setViewMode('create');
-                  };
-                  handleStartCreation();
-                }}
-                className="w-full sm:w-auto bg-slate-900 text-white px-10 py-6 rounded-[28px] font-black text-xl shadow-2xl shadow-slate-200 hover:scale-105 transition-transform active:scale-95 flex items-center justify-center gap-3"
-              >
-                <SparklesIcon className="w-6 h-6 text-indigo-400" />
-                Plan New Trip
-              </button>
-              <button
-                onClick={() => setViewMode('join')}
-                className="w-full sm:w-auto bg-white text-slate-900 px-10 py-6 rounded-[28px] font-black text-xl shadow-xl border border-white hover:border-indigo-100 hover:shadow-2xl transition-all active:scale-95 flex items-center justify-center gap-3"
-              >
-                <IdentificationIcon className="w-6 h-6 text-slate-400" />
-                Join Existing
-              </button>
-            </div>
-          </div>
-        )}
+          {viewMode === 'create' && (
+            <motion.div
+              key="create"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3 }}
+              className="w-full max-w-lg"
+            >
+              <Suspense fallback={<div className="p-10 text-center"><Skeleton className="h-96 w-full rounded-2xl" /></div>}>
+                <TripSetup
+                  onComplete={handleCreateOrJoin}
+                  onBack={() => setViewMode('landing')}
+                />
+              </Suspense>
+            </motion.div>
+          )}
 
-        {viewMode === 'create' && (
-          <TripSetup
-            onComplete={handleCreateOrJoin}
-            onBack={() => setViewMode('landing')}
-          />
-        )}
-
-        {viewMode === 'join' && (
-          <TripJoin onJoin={handleCreateOrJoin} onBack={() => setViewMode('landing')} initialTripId={initialTripId} />
-        )}
+          {viewMode === 'join' && (
+            <motion.div
+              key="join"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3 }}
+              className="w-full max-w-lg"
+            >
+              <Suspense fallback={<div className="p-10 text-center"><Skeleton className="h-64 w-full rounded-2xl" /></div>}>
+                <TripJoin onJoin={handleCreateOrJoin} onBack={() => setViewMode('landing')} initialTripId={initialTripId} />
+              </Suspense>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
       </div>
 

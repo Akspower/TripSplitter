@@ -3,16 +3,16 @@ import { PlusIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import type { Member, Expense, ExpenseCategory } from '../types';
 import toast from 'react-hot-toast';
 
-const ExpenseForm: React.FC<{ members: Member[], onAdd: (e: Expense) => void, onCancel: () => void }> = ({ members, onAdd, onCancel }) => {
-    const [desc, setDesc] = useState('');
-    const [amount, setAmount] = useState('');
-    const [category, setCategory] = useState<ExpenseCategory>('Food');
-    const [payerId, setPayerId] = useState(''); // Default to empty
-    const [participantIds, setParticipantIds] = useState<string[]>(members.map(m => m.id));
+const ExpenseForm: React.FC<{ members: Member[], onAdd: (e: Expense) => void, onCancel: () => void, initialData?: Expense }> = ({ members, onAdd, onCancel, initialData }) => {
+    const [desc, setDesc] = useState(initialData?.description || '');
+    const [amount, setAmount] = useState(initialData?.amount.toString() || '');
+    const [category, setCategory] = useState<ExpenseCategory>(initialData?.category || 'Food');
+    const [payerId, setPayerId] = useState(initialData?.payerId || '');
+    const [participantIds, setParticipantIds] = useState<string[]>(initialData?.participantIds || members.map(m => m.id));
     const [saving, setSaving] = useState(false);
 
-    const [splitType, setSplitType] = useState<'EQUAL' | 'EXACT'>('EQUAL');
-    const [splitDetails, setSplitDetails] = useState<Record<string, number>>({});
+    const [splitType, setSplitType] = useState<'EQUAL' | 'EXACT'>(initialData?.splitType || 'EQUAL');
+    const [splitDetails, setSplitDetails] = useState<Record<string, number>>(initialData?.splitDetails || {});
 
     const currentSplitSum = Object.values(splitDetails).reduce((a, b) => a + b, 0);
 
@@ -61,13 +61,14 @@ const ExpenseForm: React.FC<{ members: Member[], onAdd: (e: Expense) => void, on
             if (desc && amount) {
                 setSaving(true);
                 onAdd({
-                    id: '',
+                    id: initialData?.id || '',
                     description: desc,
                     amount: numAmount,
-                    date: new Date().toISOString(),
+                    date: initialData?.date || new Date().toISOString(),
                     category,
                     payerId,
-                    participantIds: involvedIds, // Only those with amounts are 'participants' logically
+                    participantIds: involvedIds,
+                    createdBy: initialData?.createdBy || '',
                     splitType: 'EXACT',
                     splitDetails
                 });
@@ -78,13 +79,14 @@ const ExpenseForm: React.FC<{ members: Member[], onAdd: (e: Expense) => void, on
         if (desc && amount && participantIds.length > 0) {
             setSaving(true);
             onAdd({
-                id: '',
+                id: initialData?.id || '', // Keep ID if editing
                 description: desc,
                 amount: numAmount,
-                date: new Date().toISOString(),
+                date: initialData?.date || new Date().toISOString(), // Keep date if editing
                 category,
                 payerId,
-                participantIds: participantIds.length > 0 ? participantIds : members.map(m => m.id), // Fallback safety
+                participantIds: participantIds.length > 0 ? participantIds : members.map(m => m.id),
+                createdBy: initialData?.createdBy || '',
                 splitType: 'EQUAL'
             });
         }
@@ -193,7 +195,7 @@ const ExpenseForm: React.FC<{ members: Member[], onAdd: (e: Expense) => void, on
                     <div className="pt-8 flex gap-4">
                         <button type="button" onClick={onCancel} className="flex-1 py-6 rounded-[28px] font-black text-slate-400 hover:bg-slate-50 transition-colors uppercase tracking-widest text-xs">Discard</button>
                         <button type="submit" disabled={saving} className="flex-[2] bg-indigo-600 text-white py-6 rounded-[28px] font-black text-xl shadow-2xl shadow-indigo-200 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-70">
-                            {saving ? 'Saving...' : 'Save Bill'}
+                            {saving ? 'Saving...' : initialData ? 'Update Bill' : 'Save Bill'}
                         </button>
                     </div>
                 </form>

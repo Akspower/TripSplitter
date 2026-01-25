@@ -17,7 +17,7 @@ export interface Expense {
   category: ExpenseCategory;
   payerId: string;
   participantIds: string[];
-  createdBy?: string;
+  createdBy: string; // Now mandatory for "Creator Only" edit logic
   splitType?: 'EQUAL' | 'EXACT';
   splitDetails?: Record<string, number>; // Map of memberId -> amount
 }
