@@ -156,11 +156,7 @@ const Dashboard: React.FC<{
         }
     }, [trip.expenses.length]);
 
-    const getUPILink = () => {
-        // Simple UPI link - just opens UPI app, user picks contact & enters amount manually
-        // This is more reliable than trying to pre-fill data
-        return `upi://pay`;
-    };
+
 
     return (
         <div className="pb-40 px-4 md:px-6 pt-10 max-w-7xl mx-auto w-full overflow-hidden">
@@ -410,15 +406,6 @@ const Dashboard: React.FC<{
                                                         <span className={`text-2xl sm:text-3xl font-black block sm:inline ${d.from === myId ? 'text-rose-600' : (d.to === myId ? 'text-emerald-600' : 'text-slate-900')}`}>
                                                             {formatINR(d.amount)}
                                                         </span>
-
-                                                        {d.from === myId && (
-                                                            <a
-                                                                href={getUPILink()}
-                                                                className="bg-slate-900 text-white text-[10px] font-bold px-4 py-2 rounded-full uppercase tracking-widest hover:bg-indigo-600 transition-colors flex items-center gap-1"
-                                                            >
-                                                                Pay Now <ArrowRightIcon className="w-3 h-3" />
-                                                            </a>
-                                                        )}
 
                                                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block sm:hidden">to settle</span>
                                                     </div>
