@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { TripService } from '../services/tripService';
 import type { Trip } from '../types';
+import toast from 'react-hot-toast';
 
 const TripJoin: React.FC<{ onJoin: (trip: Trip, myId: string) => void, onBack: () => void, initialTripId?: string }> = ({ onJoin, onBack, initialTripId }) => {
     const [step, setStep] = useState(1);
@@ -20,16 +21,27 @@ const TripJoin: React.FC<{ onJoin: (trip: Trip, myId: string) => void, onBack: (
     }, [initialTripId]);
 
     const handleFetchTrip = async (id: string) => {
-        if (!id) return;
+        const trimmedId = id.trim();
+
+        if (!trimmedId) {
+            toast.error('Please enter a Room ID');
+            return;
+        }
+
+        if (trimmedId.length !== 6 || !/^\d{6}$/.test(trimmedId)) {
+            toast.error('Room ID must be exactly 6 digits');
+            return;
+        }
+
         setIsJoining(true);
         setError('');
-        const result = await TripService.getTrip(id.trim());
+        const result = await TripService.getTrip(trimmedId);
 
         if (result.success && result.trip) {
             setFoundTrip(result.trip);
             setStep(2);
         } else {
-            setError('Trip not found. Check the ID.');
+            toast.error('Trip not found. Please check the Room ID.');
             if (initialTripId) {
                 // If auto-join failed, clear the ID so user can type manually
                 setTripId('');
@@ -67,22 +79,42 @@ const TripJoin: React.FC<{ onJoin: (trip: Trip, myId: string) => void, onBack: (
 
     const handleJoinNew = async () => {
         if (!foundTrip) return;
+
+        const trimmedName = guestName.trim();
+
+        if (!trimmedName) {
+            toast.error('Please enter your name');
+            return;
+        }
+
+        if (trimmedName.length > 30) {
+            toast.error('Name is too long (max 30 characters)');
+            return;
+        }
+
+        // Check for duplicate name
+        if (foundTrip.members.some(m => m.name.toLowerCase() === trimmedName.toLowerCase())) {
+            toast.error(`The name "${trimmedName}" is already taken. Please choose a different name.`);
+            return;
+        }
+
         setIsJoining(true);
         setError('');
 
         const myId = Math.random().toString(36).substr(2, 9);
         const result = await TripService.joinTrip(foundTrip.id, {
             id: myId,
-            name: guestName.trim(),
+            name: trimmedName,
             isCreator: false
         });
 
         if (result.success && result.trip) {
+            toast.success(`Welcome to ${foundTrip.name}!`);
             onJoin(result.trip, myId);
         } else {
-            setError('Could not join trip.');
+            toast.error('Could not join trip. Please try again.');
+            setIsJoining(false);
         }
-        setIsJoining(false);
     };
 
     return (
@@ -96,6 +128,7 @@ const TripJoin: React.FC<{ onJoin: (trip: Trip, myId: string) => void, onBack: (
                         <input
                             autoFocus
                             type="text"
+                            maxLength={6}
                             className="w-full bg-slate-50 border-none rounded-2xl px-6 py-5 focus:ring-2 focus:ring-indigo-500 outline-none font-black text-3xl tracking-widest text-center uppercase"
                             placeholder="123456"
                             value={tripId}
@@ -169,6 +202,7 @@ const TripJoin: React.FC<{ onJoin: (trip: Trip, myId: string) => void, onBack: (
                     <div className="bg-white p-6 rounded-[32px] shadow-xl border border-white">
                         <input
                             type="text"
+                            maxLength={30}
                             className="w-full bg-slate-50 border-none rounded-2xl px-6 py-5 focus:ring-2 focus:ring-indigo-500 outline-none font-bold text-xl"
                             placeholder="Enter New Name"
                             value={guestName}

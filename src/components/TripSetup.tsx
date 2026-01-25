@@ -3,6 +3,7 @@ import { IdentificationIcon, PlusIcon, TrashIcon, LockClosedIcon, SparklesIcon }
 import { TripService } from '../services/tripService';
 import type { Trip, Member, TripStyle, BudgetType, AgeGroup } from '../types';
 import { getAvatarColor } from './MemberAvatar';
+import toast from 'react-hot-toast';
 
 const TripSetup: React.FC<{ onComplete: (trip: Trip, myId: string) => void, onBack: () => void }> = ({ onComplete, onBack }) => {
     const [step, setStep] = useState(1);
@@ -72,14 +73,76 @@ const TripSetup: React.FC<{ onComplete: (trip: Trip, myId: string) => void, onBa
         localStorage.setItem('trip_setup_state', JSON.stringify(state));
     }, [step, creatorName, formData, members, adminPin, tripStyle, budgetType, ageGroup]);
 
-    const addMember = () => {
-        if (newMember.trim()) {
-            setMembers([...members, { id: Math.random().toString(36).substr(2, 9), name: newMember.trim() }]);
-            setNewMember('');
+    // Validation function for Step 2
+    const handleNextFromStep2 = () => {
+        if (!formData.name.trim()) {
+            toast.error('Please enter a trip name');
+            return;
         }
+        if (!formData.destination.trim()) {
+            toast.error('Please enter a destination');
+            return;
+        }
+        if (!formData.startDate) {
+            toast.error('Please select a start date');
+            return;
+        }
+        if (!formData.endDate) {
+            toast.error('Please select an end date');
+            return;
+        }
+        if (new Date(formData.endDate) < new Date(formData.startDate)) {
+            toast.error('End date must be on or after start date');
+            return;
+        }
+        setStep(3);
+    };
+
+    const addMember = () => {
+        const trimmedName = newMember.trim();
+
+        if (!trimmedName) {
+            toast.error('Please enter a member name');
+            return;
+        }
+
+        if (trimmedName.length > 30) {
+            toast.error('Name is too long (max 30 characters)');
+            return;
+        }
+
+        // Check for duplicate (case-insensitive)
+        if (members.some(m => m.name.toLowerCase() === trimmedName.toLowerCase())) {
+            toast.error(`${trimmedName} is already added`);
+            return;
+        }
+
+        // Check if creator name matches
+        if (creatorName.toLowerCase() === trimmedName.toLowerCase()) {
+            toast.error(`You (${creatorName}) are already part of the trip`);
+            return;
+        }
+
+        // Check member limit
+        if (members.length >= 20) {
+            toast.error('Maximum 20 members allowed');
+            return;
+        }
+
+        setMembers([...members, {
+            id: Math.random().toString(36).substr(2, 9),
+            name: trimmedName
+        }]);
+        setNewMember('');
+        toast.success(`✓ ${trimmedName} added to the trip`);
     };
 
     const finishSetup = async () => {
+        if (members.length === 0) {
+            toast.error('Add at least one other person to split expenses with');
+            return;
+        }
+
         setIsCreating(true);
         const creatorId = Math.random().toString(36).substr(2, 9);
         // Use 6-digit ID for easier sharing
@@ -106,11 +169,12 @@ const TripSetup: React.FC<{ onComplete: (trip: Trip, myId: string) => void, onBa
 
         if (result.success) {
             localStorage.removeItem('trip_setup_state');
+            toast.success('Trip created successfully!');
             onComplete(newTrip, creatorId);
         } else {
-            alert(`Failed to create trip: ${result.error || "Unknown error"}. Please check your connection or try again.`);
+            toast.error(`Failed to create trip: ${result.error || "Unknown error"}`);
+            setIsCreating(false);
         }
-        setIsCreating(false);
     };
 
     return (
@@ -147,6 +211,7 @@ const TripSetup: React.FC<{ onComplete: (trip: Trip, myId: string) => void, onBa
                         <input
                             autoFocus
                             type="text"
+                            maxLength={30}
                             className="w-full bg-slate-50 border-none rounded-2xl px-6 py-5 focus:ring-2 focus:ring-indigo-500 outline-none font-bold text-xl"
                             placeholder="Ex: Aman"
                             value={creatorName}
@@ -169,11 +234,11 @@ const TripSetup: React.FC<{ onComplete: (trip: Trip, myId: string) => void, onBa
                     <div className="space-y-4">
                         <div className="bg-white p-6 rounded-[28px] shadow-xl border border-slate-50">
                             <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 tracking-widest">Adventure Title</label>
-                            <input type="text" className="w-full bg-transparent border-none px-0 py-1 focus:ring-0 outline-none font-black text-2xl" placeholder="Goa Road Trip" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
+                            <input type="text" maxLength={50} className="w-full bg-transparent border-none px-0 py-1 focus:ring-0 outline-none font-black text-2xl" placeholder="Goa Road Trip" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
                         </div>
                         <div className="bg-white p-6 rounded-[28px] shadow-xl border border-slate-50">
                             <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 tracking-widest">The Map Says...</label>
-                            <input type="text" className="w-full bg-transparent border-none px-0 py-1 focus:ring-0 outline-none font-bold text-lg" placeholder="Ex: South Goa" value={formData.destination} onChange={(e) => setFormData({ ...formData, destination: e.target.value })} />
+                            <input type="text" maxLength={50} className="w-full bg-transparent border-none px-0 py-1 focus:ring-0 outline-none font-bold text-lg" placeholder="Ex: South Goa" value={formData.destination} onChange={(e) => setFormData({ ...formData, destination: e.target.value })} />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="bg-white p-6 rounded-[28px] shadow-xl border border-slate-50">
@@ -213,8 +278,8 @@ const TripSetup: React.FC<{ onComplete: (trip: Trip, myId: string) => void, onBa
                         <button onClick={() => setStep(1)} className="flex-1 bg-slate-100 text-slate-500 py-5 rounded-[24px] font-bold">Back</button>
                         <button
                             disabled={!formData.name || !formData.destination || !formData.startDate || !formData.endDate}
-                            onClick={() => setStep(3)}
-                            className="flex-[2] bg-slate-900 text-white py-5 rounded-[24px] font-black text-xl shadow-xl"
+                            onClick={handleNextFromStep2}
+                            className="flex-[2] bg-slate-900 text-white py-5 rounded-[24px] font-black text-xl shadow-xl transition-opacity disabled:opacity-30"
                         >
                             Add The Squad
                         </button>
@@ -228,6 +293,7 @@ const TripSetup: React.FC<{ onComplete: (trip: Trip, myId: string) => void, onBa
                     <div className="flex gap-3">
                         <input
                             type="text"
+                            maxLength={30}
                             className="flex-1 bg-white border border-slate-100 rounded-[24px] px-6 py-5 focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm font-bold"
                             placeholder="Friend's Name"
                             value={newMember}
