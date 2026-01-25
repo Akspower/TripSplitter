@@ -7,6 +7,7 @@ import { ArrowTrendingUpIcon, BanknotesIcon, CalendarIcon } from '@heroicons/rea
 interface AnalyticsProps {
     trip: Trip;
     myId: string;
+    onExportPDF?: () => void;
 }
 
 const COLORS = [
@@ -20,7 +21,7 @@ const COLORS = [
     '#84CC16', // Lime
 ];
 
-const Analytics: React.FC<AnalyticsProps> = ({ trip, myId }) => {
+const Analytics: React.FC<AnalyticsProps> = ({ trip, myId, onExportPDF }) => {
 
     // 1. Category Data
     const categoryData = useMemo(() => {
@@ -80,6 +81,21 @@ const Analytics: React.FC<AnalyticsProps> = ({ trip, myId }) => {
 
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+
+            {/* PDF Download Button */}
+            {onExportPDF && (
+                <div className="flex justify-end">
+                    <button
+                        onClick={onExportPDF}
+                        className="flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-full uppercase tracking-wide transition-all shadow-lg hover:shadow-xl"
+                    >
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        Download Complete Report (PDF)
+                    </button>
+                </div>
+            )}
 
             {/* Hero Metrics Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

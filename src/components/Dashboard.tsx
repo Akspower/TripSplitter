@@ -18,8 +18,9 @@ const Dashboard: React.FC<{
     onAddExpense: () => void,
     onEditExpense: (e: Expense) => void,
     onDeleteExpense: (id: string) => void,
-    onRefreshTrip: () => void
-}> = ({ trip, myId, onAddExpense, onEditExpense, onDeleteExpense, onRefreshTrip }) => {
+    onRefreshTrip: () => void,
+    onExportPDF?: () => void
+}> = ({ trip, myId, onAddExpense, onEditExpense, onDeleteExpense, onRefreshTrip, onExportPDF }) => {
 
     const [activeTab, setActiveTab] = useState<'expenses' | 'summary' | 'insights' | 'analytics'>('expenses');
     const [insights, setInsights] = useState<string | null>(null);
@@ -250,7 +251,7 @@ const Dashboard: React.FC<{
                     </div>
 
                     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        {activeTab === 'analytics' && <Analytics trip={optimisticTrip} myId={myId} />}
+                        {activeTab === 'analytics' && <Analytics trip={optimisticTrip} myId={myId} onExportPDF={onExportPDF} />}
 
                         {activeTab === 'expenses' && (
                             <div className="space-y-4">

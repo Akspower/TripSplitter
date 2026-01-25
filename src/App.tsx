@@ -285,6 +285,7 @@ export default function App() {
             onEditExpense={(e) => { setEditingExpense(e); setShowAddExpense(true); }}
             onDeleteExpense={handleDeleteExpense}
             onRefreshTrip={() => loadTrip(currentTrip.id)}
+            onExportPDF={() => PDFService.generateTripReport(currentTrip)}
           />
 
           {showAddExpense && (
@@ -302,7 +303,14 @@ export default function App() {
 
   return (
     <div className="min-h-[100dvh] bg-slate-50 selection:bg-indigo-100 selection:text-indigo-900 font-sans relative overflow-hidden flex flex-col">
-      <Toaster position="top-center" toastOptions={{ className: 'font-bold rounded-2xl shadow-xl', duration: 3000 }} />
+      <Toaster
+        position="top-center"
+        toastOptions={{
+          className: 'font-bold rounded-2xl shadow-xl',
+          duration: 3000
+        }}
+        containerStyle={{ zIndex: 9999 }}
+      />
 
       <Header key={`header-${viewMode}`} onReset={handleReset} tripId={currentTrip ? (currentTrip as Trip).id : undefined} />
 
