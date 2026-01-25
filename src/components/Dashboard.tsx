@@ -30,6 +30,9 @@ const Dashboard: React.FC<{
     // Optimistic UI state for deleted members
     const [hiddenMemberIds, setHiddenMemberIds] = useState<Set<string>>(new Set());
 
+    // Delete confirmation state
+    const [expenseToDelete, setExpenseToDelete] = useState<string | null>(null);
+
     // Create a computed trip object that filters out hidden members globally for THIS component
     const optimisticTrip = useMemo(() => {
         if (hiddenMemberIds.size === 0) return trip;
@@ -168,6 +171,22 @@ const Dashboard: React.FC<{
                 onConfirm={confirmModal.onConfirm}
                 onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
             />
+
+            {/* Delete Expense Confirmation */}
+            <ConfirmDialog
+                isOpen={expenseToDelete !== null}
+                title="Delete Expense?"
+                message="Are you sure you want to delete this expense? This action cannot be undone and will affect the settlement calculations."
+                isDestructive={true}
+                onConfirm={() => {
+                    if (expenseToDelete) {
+                        onDeleteExpense(expenseToDelete);
+                        setExpenseToDelete(null);
+                    }
+                }}
+                onCancel={() => setExpenseToDelete(null)}
+            />
+
 
             <div className="lg:grid lg:grid-cols-12 lg:gap-10 lg:items-start">
                 {/* Left Column - Net Standing */}
@@ -333,7 +352,13 @@ const Dashboard: React.FC<{
                                                         )}
                                                     </div>
                                                     {(e.createdBy === myId || trip.creatorId === myId) && (
-                                                        <button onClick={() => { vibrate(HapticPatterns.warning); onDeleteExpense(e.id); }} className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity p-3 bg-rose-50 text-rose-400 rounded-2xl hover:bg-rose-500 hover:text-white">
+                                                        <button
+                                                            onClick={() => {
+                                                                vibrate(HapticPatterns.warning);
+                                                                setExpenseToDelete(e.id);
+                                                            }}
+                                                            className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity p-3 bg-rose-50 text-rose-400 rounded-2xl hover:bg-rose-500 hover:text-white"
+                                                        >
                                                             <TrashIcon className="w-5 h-5" />
                                                         </button>
                                                     )}
