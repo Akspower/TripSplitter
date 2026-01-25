@@ -35,20 +35,50 @@ const ExpenseForm: React.FC<{ members: Member[], onAdd: (e: Expense) => void, on
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        const numAmount = parseFloat(amount);
 
-        // Validation: Payer must be selected
+        // Comprehensive Validation with Clear Error Messages
+
+        // 1. Description validation
+        if (!desc.trim()) {
+            toast.error('Please enter a description for this expense');
+            return;
+        }
+
+        if (desc.trim().length > 100) {
+            toast.error('Description is too long (max 100 characters)');
+            return;
+        }
+
+        // 2. Amount validation
+        const numAmount = parseFloat(amount);
+        if (!amount || isNaN(numAmount)) {
+            toast.error('Please enter a valid amount');
+            return;
+        }
+
+        if (numAmount <= 0) {
+            toast.error('Amount must be greater than zero');
+            return;
+        }
+
+        if (numAmount > 1000000) {
+            toast.error('Amount seems too high. Please check.');
+            return;
+        }
+
+        // 3. Payer validation (WHO PAID?)
         if (!payerId) {
-            toast.error("Who paid? Please select a person.", {
-                icon: '🤔',
-                style: { borderRadius: '20px', background: '#333', color: '#fff' }
+            toast.error("Who paid for this? Please select who footed the bill", {
+                icon: '💸',
+                duration: 4000
             });
             return;
         }
 
+        // 4. EXACT split validation
         if (splitType === 'EXACT') {
             if (Math.abs(currentSplitSum - numAmount) > 0.5) {
-                toast.error(`Split amount (₹${currentSplitSum}) does not match bill amount (₹${numAmount}). Please fix.`);
+                toast.error(`Split amount (₹${currentSplitSum.toFixed(2)}) does not match bill amount (₹${numAmount.toFixed(2)}). Please fix.`);
                 return;
             }
             // Filter participants to only those with > 0 amount
@@ -58,38 +88,44 @@ const ExpenseForm: React.FC<{ members: Member[], onAdd: (e: Expense) => void, on
                 return;
             }
 
-            if (desc && amount) {
-                setSaving(true);
-                onAdd({
-                    id: initialData?.id || '',
-                    description: desc,
-                    amount: numAmount,
-                    date: initialData?.date || new Date().toISOString(),
-                    category,
-                    payerId,
-                    participantIds: involvedIds,
-                    createdBy: initialData?.createdBy || '',
-                    splitType: 'EXACT',
-                    splitDetails
-                });
-            }
+            setSaving(true);
+            onAdd({
+                id: initialData?.id || '',
+                description: desc.trim(),
+                amount: numAmount,
+                date: initialData?.date || new Date().toISOString(),
+                category,
+                payerId,
+                participantIds: involvedIds,
+                createdBy: initialData?.createdBy || '',
+                splitType: 'EXACT',
+                splitDetails
+            });
             return;
         }
 
-        if (desc && amount && participantIds.length > 0) {
-            setSaving(true);
-            onAdd({
-                id: initialData?.id || '', // Keep ID if editing
-                description: desc,
-                amount: numAmount,
-                date: initialData?.date || new Date().toISOString(), // Keep date if editing
-                category,
-                payerId,
-                participantIds: participantIds.length > 0 ? participantIds : members.map(m => m.id),
-                createdBy: initialData?.createdBy || '',
-                splitType: 'EQUAL'
+        // 5. Participant validation (WHO OWES?)
+        if (participantIds.length === 0) {
+            toast.error('Please select at least one person who owes for this expense', {
+                icon: '👥',
+                duration: 4000
             });
+            return;
         }
+
+        // All validations passed - Submit
+        setSaving(true);
+        onAdd({
+            id: initialData?.id || '',
+            description: desc.trim(),
+            amount: numAmount,
+            date: initialData?.date || new Date().toISOString(),
+            category,
+            payerId,
+            participantIds,
+            createdBy: initialData?.createdBy || '',
+            splitType: 'EQUAL'
+        });
     };
 
     const categories: ExpenseCategory[] = ['Food', 'Drink', 'Alcohol', 'Cab/Taxi', 'Train/Bus/Flight', 'Hotel/Stay', 'Entry Fee', 'Trekking Gear', 'Shopping', 'Other'];
@@ -108,7 +144,7 @@ const ExpenseForm: React.FC<{ members: Member[], onAdd: (e: Expense) => void, on
                     <div className="space-y-6">
                         <div className="bg-slate-50 p-6 rounded-[32px] border-2 border-transparent focus-within:border-indigo-500 transition-all">
                             <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Description</label>
-                            <input autoFocus type="text" required className="w-full bg-transparent border-none p-0 focus:ring-0 font-black text-2xl text-slate-900 placeholder:text-slate-200" placeholder="Ex: Dinner at Thalassa" value={desc} onChange={(e) => setDesc(e.target.value)} />
+                            <input autoFocus type="text" required maxLength={100} className="w-full bg-transparent border-none p-0 focus:ring-0 font-black text-2xl text-slate-900 placeholder:text-slate-200" placeholder="Ex: Dinner at Thalassa" value={desc} onChange={(e) => setDesc(e.target.value)} />
                         </div>
 
                         <div className="grid grid-cols-2 gap-6">
