@@ -157,8 +157,10 @@ const Dashboard: React.FC<{
     }, [trip.expenses.length]);
 
     const getUPILink = (payeeName: string, amount: number) => {
-        // This is a generic intent link. In a real app, you'd store the user's UPI ID.
-        return `upi://pay?pa=&pn=${encodeURIComponent(payeeName)}&am=${amount}&cu=INR&tn=${encodeURIComponent(`Settlement for ${trip.name}`)}`;
+        // Round to whole number - many UPI apps don't handle decimals well
+        const roundedAmount = Math.round(amount);
+        // Generic UPI link - user will select contact in their UPI app
+        return `upi://pay?pa=&pn=${encodeURIComponent(payeeName)}&am=${roundedAmount}&cu=INR&tn=${encodeURIComponent(`Settlement for ${trip.name}`)}`;
     };
 
     return (
