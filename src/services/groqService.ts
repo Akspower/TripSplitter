@@ -39,7 +39,7 @@ const generateWithRetry = async (prompt: string, maxRetries = 3): Promise<string
             const isRetryable = error?.status === 429 || error?.status >= 500;
 
             if (isRetryable && attempt < maxRetries) {
-                // console.log(`AI retry attempt ${attempt}/${maxRetries}...`);
+                // Retry logic
                 await delay(2000 * attempt);
                 continue;
             }
