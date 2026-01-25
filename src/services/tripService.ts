@@ -138,7 +138,7 @@ export const TripService = {
 
 
 
-    async updateExpense(tripId: string, expense: Expense): Promise<{ success: boolean, error?: string }> {
+    async updateExpense(_: string, expense: Expense): Promise<{ success: boolean, error?: string }> {
         const { error } = await supabase.from('expenses').update({
             description: expense.description,
             amount: expense.amount,
