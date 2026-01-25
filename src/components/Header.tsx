@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { CurrencyRupeeIcon, MapPinIcon, TrashIcon, CalendarDaysIcon, ArrowLeftOnRectangleIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
+import ThemeToggle from './ui/ThemeToggle';
 
 interface HeaderProps {
     tripName?: string;
@@ -93,6 +94,9 @@ const Header: React.FC<HeaderProps> = ({ tripName, destination, startDate, endDa
                             )}
                         </div>
                     )}
+
+                    {/* Theme Toggle */}
+                    <ThemeToggle />
 
                     {onExportPDF && tripId && (
                         <button

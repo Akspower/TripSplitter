@@ -224,7 +224,7 @@ export default function App() {
 
   if (loadingTrip) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center p-6">
         <div className="w-full max-w-md space-y-8 animate-pulse">
           <div className="flex justify-center">
             <Skeleton className="w-20 h-20 rounded-full" />
@@ -244,7 +244,7 @@ export default function App() {
 
   if (currentTrip) {
     return (
-      <div className="min-h-[100dvh] bg-slate-50 selection:bg-indigo-100 selection:text-indigo-900 font-sans">
+      <div className="min-h-[100dvh] bg-slate-50 dark:bg-slate-900 selection:bg-indigo-100 dark:selection:bg-indigo-900 selection:text-indigo-900 dark:selection:text-indigo-100 font-sans">
         {/* Global Confirm Dialog for Active Trip View */}
         <ConfirmDialog
           isOpen={confirmModal.isOpen}
@@ -320,13 +320,13 @@ export default function App() {
             >
               <div className="relative inline-block">
                 <div className="absolute inset-0 bg-indigo-500 blur-[80px] opacity-20"></div>
-                <h1 className="text-6xl sm:text-8xl font-black text-slate-900 tracking-tighter mb-6 relative">
-                  Split<span className="text-indigo-600">Way</span>
+                <h1 className="text-6xl sm:text-8xl font-black text-slate-900 dark:text-slate-100 tracking-tighter mb-6 relative">
+                  Split<span className="text-indigo-600 dark:text-indigo-400">Way</span>
                 </h1>
               </div>
-              <p className="text-xl sm:text-2xl font-bold text-slate-400 max-w-2xl mx-auto leading-relaxed">
+              <p className="text-xl sm:text-2xl font-bold text-slate-400 dark:text-slate-500 max-w-2xl mx-auto leading-relaxed">
                 The modern way to travel with friends. <br />
-                <span className="text-indigo-500">Real-time splits. AI Suggestions. Zero drama.</span>
+                <span className="text-indigo-500 dark:text-indigo-400">Real-time splits. AI Suggestions. Zero drama.</span>
               </p>
 
               <div className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-8">
