@@ -7,15 +7,17 @@
     }
 
     body {
-        background-color: #f8fafc;
+        background-color: #0A0A0F;
+        color: #F4F4F8;
         min-height: 100dvh;
         overscroll-behavior-y: none;
+        font-family: 'Space Grotesk', sans-serif;
     }
 
-    /* Custom Scrollbar for Chrome/Safari/Edge */
+    /* Scrollbar */
     ::-webkit-scrollbar {
-        width: 6px;
-        height: 6px;
+        width: 4px;
+        height: 4px;
     }
 
     ::-webkit-scrollbar-track {
@@ -23,15 +25,10 @@
     }
 
     ::-webkit-scrollbar-thumb {
-        background: #cbd5e1;
+        background: rgba(255, 255, 255, 0.1);
         border-radius: 99px;
     }
 
-    ::-webkit-scrollbar-thumb:hover {
-        background: #94a3b8;
-    }
-
-    /* Hide scrollbar utility */
     .no-scrollbar::-webkit-scrollbar {
         display: none;
     }
@@ -44,10 +41,154 @@
 
 @layer utilities {
     .glass {
-        @apply bg-white/70 backdrop-blur-lg border-b border-white/20;
+        background: rgba(10, 10, 15, 0.85);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+    }
+
+    .glass-card {
+        background: rgba(255, 255, 255, 0.04);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .glass-card-primary {
+        background: rgba(182, 19, 236, 0.06);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(182, 19, 236, 0.2);
+    }
+
+    .glass-pill {
+        background: rgba(255, 255, 255, 0.04);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
     }
 
     .card-3d {
-        @apply transition-transform duration-300 hover:scale-[1.02] hover:shadow-2xl;
+        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease;
+    }
+
+    .card-3d:hover {
+        transform: perspective(800px) rotateY(1.5deg) rotateX(1deg) scale(1.01);
+        box-shadow: 0 32px 80px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(182, 19, 236, 0.15);
+    }
+
+    .btn-primary {
+        background: #b613ec;
+        box-shadow: 0 8px 32px rgba(182, 19, 236, 0.3);
+        border-top: 1px solid rgba(255, 255, 255, 0.15);
+        color: white;
+        font-weight: 700;
+        transition: box-shadow 0.2s, transform 0.15s;
+    }
+
+    .btn-primary:hover {
+        box-shadow: 0 8px 48px rgba(182, 19, 236, 0.5);
+    }
+
+    .btn-primary:active {
+        transform: scale(0.97);
+    }
+
+    .text-primary-color {
+        color: #b613ec;
+    }
+
+    .border-primary-color {
+        border-color: #b613ec;
+    }
+
+    .bg-primary-color {
+        background-color: #b613ec;
+    }
+
+    .animate-shimmer {
+        animation: shimmer-dark 2s infinite linear;
+        background: linear-gradient(to right, rgba(255, 255, 255, 0.04) 4%, rgba(255, 255, 255, 0.09) 25%, rgba(255, 255, 255, 0.04) 36%);
+        background-size: 1000px 100%;
+    }
+
+    .sync-dot {
+        animation: pulse-sync 2s infinite;
+    }
+
+    .floating-dock {
+        animation: float 4s ease-in-out infinite;
+    }
+
+    .ios-shadow {
+        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Drag handle for bottom sheet */
+    .bottom-sheet-handle {
+        width: 48px;
+        height: 5px;
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 99px;
+        margin: 12px auto 0;
+    }
+}
+
+@keyframes shimmer-dark {
+    0% {
+        background-position: -1000px 0;
+    }
+
+    100% {
+        background-position: 1000px 0;
+    }
+}
+
+@keyframes pulse-sync {
+
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.5;
+        transform: scale(0.85);
+    }
+}
+
+@keyframes float {
+
+    0%,
+    100% {
+        transform: translateX(-50%) translateY(0);
+    }
+
+    50% {
+        transform: translateX(-50%) translateY(-3px);
+    }
+}
+
+@keyframes pulse-glow {
+
+    0%,
+    100% {
+        box-shadow: 0 0 20px rgba(182, 19, 236, 0.3);
+    }
+
+    50% {
+        box-shadow: 0 0 40px rgba(182, 19, 236, 0.6);
+    }
+}
+
+@keyframes slide-up {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
 }

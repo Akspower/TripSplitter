@@ -4,7 +4,6 @@ import toast, { Toaster } from 'react-hot-toast';
 import type { Trip, Expense } from './types';
 import { TripService } from './services/tripService';
 import { PDFService } from './services/pdfService';
-import { IdentificationIcon, SparklesIcon } from '@heroicons/react/24/outline'; // Icons used in landing
 
 import Header from './components/Header';
 import ConfirmDialog from './components/ui/ConfirmDialog';
@@ -22,12 +21,10 @@ export default function App() {
   const [viewMode, setViewMode] = useState<'landing' | 'create' | 'join'>('landing');
   const [initialTripId, setInitialTripId] = useState<string>('');
 
-  // Custom Confirm Modal State
   const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; title: string; message: string; onConfirm: () => void; isDestructive?: boolean }>({
     isOpen: false, title: '', message: '', onConfirm: () => { }, isDestructive: false
   });
 
-  // Check for Deep Link on mount
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const joinId = params.get('join');
@@ -36,13 +33,13 @@ export default function App() {
       setViewMode('join');
     }
   }, []);
+
   const [showAddExpense, setShowAddExpense] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [loadingTrip, setLoadingTrip] = useState(true);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
 
-  // Network Status & Auto-Sync
   useEffect(() => {
     const handleOnline = () => {
       setIsOffline(false);
@@ -52,22 +49,15 @@ export default function App() {
       });
     };
     const handleOffline = () => setIsOffline(true);
-
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-
-    // Initial check on mount
-    if (navigator.onLine) {
-      TripService.syncPendingActions();
-    }
-
+    if (navigator.onLine) TripService.syncPendingActions();
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
 
-  // Initial Load with Cache Strategy
   useEffect(() => {
     const savedTripId = localStorage.getItem('tripId');
     const savedMyId = localStorage.getItem('myId');
@@ -75,37 +65,28 @@ export default function App() {
 
     if (savedTripId && savedMyId) {
       setMyId(savedMyId);
-
-      // 1. Try to load from cache immediately for instant UI
       if (cachedTripJson) {
         try {
           const cachedTrip = JSON.parse(cachedTripJson);
           if (cachedTrip.id === savedTripId) {
             setCurrentTrip(cachedTrip);
-            setLoadingTrip(false); // Show UI immediately
+            setLoadingTrip(false);
           }
         } catch (e) {
           console.error("Failed to parse cached trip", e);
         }
       }
-
-      // 2. Fetch fresh data from server
-      loadTrip(savedTripId, !!cachedTripJson); // Silent if we have cache
+      loadTrip(savedTripId, !!cachedTripJson);
     } else {
-      // If no active trip, check if we were creating one (persisted state)
-      if (localStorage.getItem('trip_setup_state')) {
-        setViewMode('create');
-      }
+      if (localStorage.getItem('trip_setup_state')) setViewMode('create');
       setLoadingTrip(false);
     }
   }, []);
 
-  // Real-time Subscription
   useEffect(() => {
     if (currentTrip?.id && !isOffline) {
       const unsubscribe = TripService.subscribeToTrip(currentTrip.id, () => {
         setIsSyncing(true);
-        // Add small delay to show sync indicator
         setTimeout(() => loadTrip(currentTrip.id, true), 500);
       });
       return unsubscribe;
@@ -117,20 +98,15 @@ export default function App() {
     const result = await TripService.getTrip(id);
     if (result.success && result.trip) {
       setCurrentTrip(result.trip);
-      // Persist ID and Data
       localStorage.setItem('tripId', id);
       localStorage.setItem('cachedTrip', JSON.stringify(result.trip));
     } else {
-      // If fail to load (e.g. deleted or offline), handle gracefully
       if (isOffline && currentTrip) {
-        // Keep current state if offline and already loaded
         setLoadingTrip(false);
       } else if (result.error === 'NOT_FOUND') {
-        // Trip no longer exists on server
         toast.error("This trip no longer exists.");
         handleReset();
       } else {
-        // Other errors (network etc), just stop loading
         setLoadingTrip(false);
       }
     }
@@ -147,7 +123,6 @@ export default function App() {
 
   const handleCreateOrJoin = (trip: Trip, id: string) => {
     setCurrentTrip(trip);
-    // update cache immediately
     localStorage.setItem('cachedTrip', JSON.stringify(trip));
     saveLocalContext(trip.id, id);
   };
@@ -163,7 +138,6 @@ export default function App() {
 
   const handleDeleteTrip = async () => {
     if (!currentTrip) return;
-
     setConfirmModal({
       isOpen: true,
       title: 'Delete Entire Trip?',
@@ -177,7 +151,7 @@ export default function App() {
         handleReset();
       }
     });
-  }
+  };
 
   const handleAddExpense = async (e: Expense) => {
     if (!currentTrip) return;
@@ -186,7 +160,6 @@ export default function App() {
     if (result.success) {
       setShowAddExpense(false);
       setEditingExpense(null);
-      // Trip update will come via subscription
     } else {
       toast.error(`Failed to add expense: ${result.error}`);
     }
@@ -206,46 +179,45 @@ export default function App() {
 
   const handleDeleteExpense = async (expenseId: string) => {
     if (!currentTrip) return;
-
-    // Optimistic update - remove immediately from UI
     const previousExpenses = currentTrip.expenses;
-    setCurrentTrip(prev => prev ? {
-      ...prev,
-      expenses: prev.expenses.filter(e => e.id !== expenseId)
-    } : null);
-
+    setCurrentTrip(prev => prev ? { ...prev, expenses: prev.expenses.filter(e => e.id !== expenseId) } : null);
     const success = await TripService.deleteExpense(expenseId);
     if (!success) {
-      // Revert on failure
       setCurrentTrip(prev => prev ? { ...prev, expenses: previousExpenses } : null);
-      alert('Failed to delete expense. Please try again.');
+      toast.error('Failed to delete expense. Please try again.');
     }
   };
 
+  // ── Dark Loading Skeleton ──────────────────────────────────────
   if (loadingTrip) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
-        <div className="w-full max-w-md space-y-8 animate-pulse">
+      <div className="min-h-screen bg-[#0A0A0F] flex items-center justify-center p-6">
+        {/* Ambient blobs */}
+        <div className="fixed inset-0 overflow-hidden pointer-events-none">
+          <div className="blob w-[50%] h-[40%] top-[-10%] left-[-10%] bg-[#b613ec]/15" />
+          <div className="blob w-[40%] h-[40%] bottom-[10%] right-[-10%] bg-indigo-600/10" />
+        </div>
+        <div className="w-full max-w-sm space-y-8 animate-pulse relative z-10">
           <div className="flex justify-center">
             <Skeleton className="w-20 h-20 rounded-full" />
           </div>
           <div className="space-y-4">
-            <Skeleton className="h-12 w-3/4 mx-auto rounded-xl" />
+            <Skeleton className="h-10 w-3/4 mx-auto rounded-xl" />
             <Skeleton className="h-4 w-1/2 mx-auto rounded-lg" />
           </div>
-          <div className="space-y-3 pt-10">
-            <Skeleton className="h-16 w-full rounded-2xl" />
-            <Skeleton className="h-16 w-full rounded-2xl" />
+          <div className="space-y-3 pt-6">
+            <Skeleton className="h-14 w-full rounded-2xl" />
+            <Skeleton className="h-14 w-full rounded-2xl" />
           </div>
         </div>
       </div>
     );
   }
 
+  // ── Active Trip View ────────────────────────────────────────────
   if (currentTrip) {
     return (
-      <div className="min-h-[100dvh] bg-slate-50 selection:bg-indigo-100 selection:text-indigo-900 font-sans">
-        {/* Global Confirm Dialog for Active Trip View */}
+      <div className="min-h-[100dvh] bg-[#0A0A0F] font-['Space_Grotesk',sans-serif]">
         <ConfirmDialog
           isOpen={confirmModal.isOpen}
           title={confirmModal.title}
@@ -254,7 +226,6 @@ export default function App() {
           onConfirm={confirmModal.onConfirm}
           onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
         />
-
         <Header
           key="active-session-header"
           tripName={currentTrip.name}
@@ -268,13 +239,13 @@ export default function App() {
           onDelete={currentTrip.creatorId === myId ? handleDeleteTrip : undefined}
           showLogout={true}
           onExportPDF={() => PDFService.generateTripReport(currentTrip)}
+          tripId={currentTrip.id}
         />
-
         <Suspense fallback={
-          <div className="p-6 max-w-7xl mx-auto w-full space-y-8 animate-pulse">
-            <div className="flex gap-4 mb-10">
-              <Skeleton className="h-64 w-1/3 rounded-[40px]" />
-              <Skeleton className="h-64 w-2/3 rounded-[40px]" />
+          <div className="p-6 max-w-7xl mx-auto w-full space-y-6 animate-pulse">
+            <div className="flex gap-4">
+              <Skeleton className="h-64 w-1/3 rounded-3xl" />
+              <Skeleton className="h-64 w-2/3 rounded-3xl" />
             </div>
           </div>
         }>
@@ -287,7 +258,6 @@ export default function App() {
             onRefreshTrip={() => loadTrip(currentTrip.id)}
             onExportPDF={() => PDFService.generateTripReport(currentTrip)}
           />
-
           {showAddExpense && (
             <ExpenseForm
               members={currentTrip.members}
@@ -301,92 +271,227 @@ export default function App() {
     );
   }
 
+  // ── Landing / Create / Join ─────────────────────────────────────
   return (
-    <div className="min-h-[100dvh] bg-slate-50 selection:bg-indigo-100 selection:text-indigo-900 font-sans relative overflow-hidden flex flex-col">
+    <div className="min-h-[100dvh] bg-[#0A0A0F] font-['Space_Grotesk',sans-serif] relative overflow-hidden flex flex-col">
       <Toaster
         position="top-center"
         toastOptions={{
-          className: 'font-bold rounded-2xl shadow-xl',
+          style: {
+            background: 'rgba(30, 10, 50, 0.95)',
+            color: '#F4F4F8',
+            border: '1px solid rgba(182,19,236,0.3)',
+            fontFamily: 'Space Grotesk, sans-serif',
+            fontWeight: 600,
+            borderRadius: '16px',
+            backdropFilter: 'blur(12px)',
+          },
           duration: 3000
         }}
         containerStyle={{ zIndex: 9999 }}
       />
 
-      <Header key={`header-${viewMode}`} onReset={handleReset} tripId={currentTrip ? (currentTrip as Trip).id : undefined} />
+      {/* Ambient Background Blobs */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="blob w-[60%] h-[45%] top-[-10%] left-[-10%] bg-[#b613ec]/20" />
+        <div className="blob w-[50%] h-[50%] bottom-[5%] right-[-10%] bg-indigo-600/10" />
+      </div>
 
-      <div className="flex-1 flex flex-col justify-center items-center px-6 relative z-10 pb-20">
-        <AnimatePresence mode='wait'>
-          {/* Hero Section */}
+      {/* Header */}
+      <header className="relative z-10 flex items-center justify-between p-5 pb-0">
+        <div className="flex items-center gap-2.5">
+          <div className="bg-[#b613ec] p-2 rounded-xl flex items-center justify-center shadow-lg shadow-[#b613ec]/30">
+            <span className="material-symbols-outlined text-white text-xl">account_balance_wallet</span>
+          </div>
+          <h2 className="text-xl font-bold tracking-tight text-[#F4F4F8]">SplitWay</h2>
+        </div>
+      </header>
+
+      <div className="flex-1 flex flex-col justify-center items-center px-5 relative z-10 pb-16 pt-6">
+        <AnimatePresence mode="wait">
+
+          {/* ── Landing ── */}
           {viewMode === 'landing' && (
             <motion.div
               key="landing"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 1.05 }}
-              transition={{ duration: 0.5 }}
-              className="max-w-4xl mx-auto w-full text-center space-y-12"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.4, ease: 'easeOut' }}
+              className="max-w-md mx-auto w-full"
             >
-              <div className="relative inline-block">
-                <div className="absolute inset-0 bg-indigo-500 blur-[80px] opacity-20"></div>
-                <h1 className="text-6xl sm:text-8xl font-black text-slate-900 tracking-tighter mb-6 relative">
-                  Split<span className="text-indigo-600">Way</span>
-                </h1>
-              </div>
-              <p className="text-xl sm:text-2xl font-bold text-slate-400 max-w-2xl mx-auto leading-relaxed">
-                The modern way to travel with friends. <br />
-                <span className="text-indigo-500">Real-time splits. AI Suggestions. Zero drama.</span>
-              </p>
+              {/* ── Premium Hero Trip Preview Card ── */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.96, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                transition={{ delay: 0.1, duration: 0.5 }}
+                className="relative w-full mb-8"
+              >
+                {/* Ambient glow behind card */}
+                <div className="absolute inset-x-8 -inset-y-4 bg-[#b613ec]/20 rounded-3xl blur-3xl" />
 
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-8">
-                <button
-                  onClick={() => {
-                    const handleStartCreation = () => {
-                      // User explicitly wants a new trip, so clear any old drafts
-                      localStorage.removeItem('trip_setup_state');
-                      setViewMode('create');
-                    };
-                    handleStartCreation();
-                  }}
-                  className="w-full sm:w-auto bg-slate-900 text-white px-10 py-6 rounded-[28px] font-black text-xl shadow-2xl shadow-slate-200 hover:scale-105 transition-transform active:scale-95 flex items-center justify-center gap-3"
+                {/* The card */}
+                <div className="relative glass-card rounded-3xl p-6 border border-white/10 overflow-hidden">
+                  <div className="absolute -top-10 -right-10 w-48 h-48 bg-[#b613ec]/20 rounded-full blur-3xl pointer-events-none" />
+                  <div className="absolute -bottom-8 -left-8 w-40 h-40 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none" />
+
+                  {/* Trip Header */}
+                  <div className="flex items-start justify-between mb-5 relative z-10">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                        <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Live Trip</span>
+                      </div>
+                      <h3 className="text-xl font-bold text-[#F4F4F8] leading-tight">Goa Beach Trip 🏖️</h3>
+                      <p className="text-xs text-[rgba(244,244,248,0.4)] mt-0.5">Panaji, South Goa • 4 nights</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[10px] font-bold text-[rgba(244,244,248,0.35)] uppercase tracking-widest mb-0.5">Total Spent</p>
+                      <p className="text-2xl font-bold text-[#F4F4F8]">₹18,420</p>
+                    </div>
+                  </div>
+
+                  {/* Member Avatars */}
+                  <div className="flex items-center gap-2 mb-5 relative z-10">
+                    {[
+                      { n: 'Arjun', g: 'from-violet-500 to-[#b613ec]' },
+                      { n: 'Priya', g: 'from-rose-400 to-pink-600' },
+                      { n: 'Sahil', g: 'from-emerald-400 to-teal-600' },
+                      { n: 'Kiran', g: 'from-amber-400 to-orange-500' },
+                    ].map((m, i) => (
+                      <div key={i} className={`w-9 h-9 rounded-xl bg-gradient-to-br ${m.g} flex items-center justify-center font-bold text-white text-sm shadow-lg border-2 border-[#0d0817]`}>
+                        {m.n[0]}
+                      </div>
+                    ))}
+                    <span className="text-[10px] font-bold text-[rgba(244,244,248,0.35)] ml-1">4 members</span>
+                  </div>
+
+                  {/* Mock Expense Items */}
+                  <div className="space-y-2.5 relative z-10">
+                    {[
+                      { emoji: '🍛', name: 'Dinner at Fisherman\'s Wharf', by: 'Arjun', amount: '₹2,400', mine: '₹600' },
+                      { emoji: '🏨', name: 'Beach Resort (2 nights)', by: 'Priya', amount: '₹7,200', mine: '₹1,800' },
+                    ].map((item, i) => (
+                      <div key={i} className="flex items-center gap-3 bg-white/5 rounded-2xl px-4 py-3 border border-white/5">
+                        <span className="text-xl">{item.emoji}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold text-[#F4F4F8] truncate">{item.name}</p>
+                          <p className="text-[10px] text-[rgba(244,244,248,0.4)]">{item.by} paid</p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-sm font-bold text-[#F4F4F8]">{item.amount}</p>
+                          <p className="text-[10px] text-[#b613ec] font-bold">You: {item.mine}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Balance pill */}
+                  <div className="mt-4 flex items-center justify-between bg-emerald-400/10 border border-emerald-400/25 rounded-2xl px-4 py-3 relative z-10">
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-emerald-400 text-sm">trending_up</span>
+                      <span className="text-xs font-bold text-[rgba(244,244,248,0.6)]">Your Net Balance</span>
+                    </div>
+                    <span className="text-base font-bold text-emerald-400">+₹3,150</span>
+                  </div>
+
+                  {/* Made for Bharat badge */}
+                  <div className="absolute top-4 right-4 z-20">
+                    <span className="px-2.5 py-1 rounded-full bg-[#b613ec]/20 border border-[#b613ec]/40 text-[9px] font-bold uppercase tracking-widest text-[#b613ec]">Made for Bharat 🇮🇳</span>
+                  </div>
+                </div>
+              </motion.div>
+
+
+              {/* Hero Text */}
+              <motion.div
+                className="space-y-3 mb-7"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2, duration: 0.4 }}
+              >
+                <h1 className="text-5xl font-bold leading-[0.95] tracking-tighter text-[#F4F4F8]">
+                  SplitWay
+                </h1>
+                <p className="text-lg text-[rgba(244,244,248,0.5)] font-light max-w-[280px]">
+                  Real-time splits. AI suggestions. Zero drama.
+                </p>
+              </motion.div>
+
+              {/* CTAs */}
+              <motion.div
+                className="flex flex-col gap-3"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3, duration: 0.4 }}
+              >
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => { localStorage.removeItem('trip_setup_state'); setViewMode('create'); }}
+                  className="w-full h-14 btn-primary rounded-2xl font-bold text-lg flex items-center justify-center gap-2"
                 >
-                  <SparklesIcon className="w-6 h-6 text-indigo-400" />
+                  <span className="material-symbols-outlined text-xl">add_circle</span>
                   Plan New Trip
-                </button>
-                <button
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.97 }}
                   onClick={() => setViewMode('join')}
-                  className="w-full sm:w-auto bg-white text-slate-900 px-10 py-6 rounded-[28px] font-black text-xl shadow-xl border border-white hover:border-indigo-100 hover:shadow-2xl transition-all active:scale-95 flex items-center justify-center gap-3"
+                  className="w-full h-14 glass-pill rounded-2xl font-bold text-lg text-[#F4F4F8] flex items-center justify-center border border-white/10"
                 >
-                  <IdentificationIcon className="w-6 h-6 text-slate-400" />
+                  <span className="material-symbols-outlined text-xl mr-2 text-[rgba(244,244,248,0.5)]">group_add</span>
                   Join Existing
-                </button>
-              </div>
+                </motion.button>
+              </motion.div>
+
+              {/* Feature Pills */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5, duration: 0.4 }}
+                className="mt-8 overflow-x-auto no-scrollbar"
+              >
+                <div className="flex gap-3 whitespace-nowrap pb-2">
+                  {[
+                    { icon: 'bolt', label: 'Real-time', color: 'text-[#b613ec]' },
+                    { icon: 'smart_toy', label: 'AI Insights', color: 'text-indigo-400' },
+                    { icon: 'cloud_off', label: 'Offline', color: 'text-emerald-400' },
+                    { icon: 'security', label: 'Secure', color: 'text-orange-400' },
+                  ].map(pill => (
+                    <div key={pill.label} className="flex items-center gap-2 glass-pill px-4 py-2.5 rounded-full shrink-0">
+                      <span className={`material-symbols-outlined text-sm ${pill.color}`}>{pill.icon}</span>
+                      <span className="text-sm font-medium text-[#F4F4F8]">{pill.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
             </motion.div>
           )}
 
+          {/* ── Create Flow ── */}
           {viewMode === 'create' && (
             <motion.div
               key="create"
-              initial={{ opacity: 0, x: 20 }}
+              initial={{ opacity: 0, x: 30 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
+              exit={{ opacity: 0, x: -30 }}
               transition={{ duration: 0.3 }}
               className="w-full max-w-lg"
             >
               <Suspense fallback={<div className="p-10 text-center"><Skeleton className="h-96 w-full rounded-2xl" /></div>}>
-                <TripSetup
-                  onComplete={handleCreateOrJoin}
-                  onBack={() => setViewMode('landing')}
-                />
+                <TripSetup onComplete={handleCreateOrJoin} onBack={() => setViewMode('landing')} />
               </Suspense>
             </motion.div>
           )}
 
+          {/* ── Join Flow ── */}
           {viewMode === 'join' && (
             <motion.div
               key="join"
-              initial={{ opacity: 0, x: 20 }}
+              initial={{ opacity: 0, x: 30 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
+              exit={{ opacity: 0, x: -30 }}
               transition={{ duration: 0.3 }}
               className="w-full max-w-lg"
             >
@@ -396,11 +501,10 @@ export default function App() {
             </motion.div>
           )}
         </AnimatePresence>
-
       </div>
 
       {/* Footer */}
-      <div className="p-6 text-center text-slate-300 font-bold text-xs uppercase tracking-[0.2em]">
+      <div className="p-5 text-center text-[rgba(244,244,248,0.2)] font-bold text-[10px] uppercase tracking-[0.2em] relative z-10">
         Secure • Realtime • Intelligent
       </div>
     </div>

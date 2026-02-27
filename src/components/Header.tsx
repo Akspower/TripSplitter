@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { CurrencyRupeeIcon, MapPinIcon, TrashIcon, CalendarDaysIcon, ArrowLeftOnRectangleIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 
 interface HeaderProps {
     tripName?: string;
@@ -22,38 +21,41 @@ const formatDateRange = (start?: string, end?: string) => {
     const s = new Date(start);
     const e = new Date(end);
     const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
-    return `${s.toLocaleDateString('en-IN', opts)} - ${e.toLocaleDateString('en-IN', { ...opts, year: 'numeric' })}`;
+    return `${s.toLocaleDateString('en-IN', opts)} – ${e.toLocaleDateString('en-IN', { ...opts, year: 'numeric' })}`;
 };
 
-const Header: React.FC<HeaderProps> = ({ tripName, destination, startDate, endDate, onReset, onDelete, isSyncing, isOffline, isCreator, tripId, userName, showLogout, onExportPDF }) => {
+const Header: React.FC<HeaderProps> = ({ tripName, destination, startDate, endDate, onReset, onDelete, isSyncing, isOffline, isCreator, tripId, showLogout, onExportPDF }) => {
     const [showExitConfirm, setShowExitConfirm] = useState(false);
+
+    const syncColor = isOffline ? 'bg-rose-500' : isSyncing ? 'bg-orange-400' : 'bg-emerald-500';
+    const syncLabel = isOffline ? 'Offline' : isSyncing ? 'Syncing...' : 'Realtime';
 
     return (
         <>
             {/* Logout Confirmation Modal */}
             {showExitConfirm && (
-                <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-                    <div className="bg-white w-full max-w-sm rounded-[32px] p-6 shadow-2xl scale-100 animate-in zoom-in-95 duration-200">
+                <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
+                    <div className="glass-card w-full max-w-sm rounded-3xl p-6 shadow-2xl border border-white/10">
                         <div className="text-center space-y-4">
-                            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                                <ArrowLeftOnRectangleIcon className="w-8 h-8 text-slate-500" />
+                            <div className="w-14 h-14 glass-pill rounded-full flex items-center justify-center mx-auto mb-2">
+                                <span className="material-symbols-outlined text-[rgba(244,244,248,0.6)] text-3xl">logout</span>
                             </div>
-                            <h3 className="text-2xl font-black text-slate-900 tracking-tight">Logout {userName || 'User'}?</h3>
-                            <p className="text-slate-500 font-medium leading-relaxed">
-                                Are you sure you want to sign out? You can rejoin anytime using the Room ID.
+                            <h3 className="text-xl font-bold text-[#F4F4F8] tracking-tight">Leave Trip?</h3>
+                            <p className="text-[rgba(244,244,248,0.5)] text-sm font-medium leading-relaxed">
+                                You can rejoin anytime using the Room ID. Your data stays safe.
                             </p>
-                            <div className="grid grid-cols-2 gap-3 pt-4">
+                            <div className="grid grid-cols-2 gap-3 pt-2">
                                 <button
                                     onClick={() => setShowExitConfirm(false)}
-                                    className="py-4 rounded-2xl font-bold text-slate-500 hover:bg-slate-50 transition-colors"
+                                    className="py-3.5 rounded-2xl font-bold text-[rgba(244,244,248,0.5)] glass-pill border border-white/10 text-sm"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     onClick={onReset}
-                                    className="py-4 rounded-2xl font-black bg-slate-900 text-white shadow-lg shadow-slate-200 hover:bg-slate-800 transition-colors"
+                                    className="py-3.5 rounded-2xl font-bold bg-[#b613ec] text-white text-sm shadow-lg shadow-[#b613ec]/30"
                                 >
-                                    Logout
+                                    Leave
                                 </button>
                             </div>
                         </div>
@@ -61,88 +63,89 @@ const Header: React.FC<HeaderProps> = ({ tripName, destination, startDate, endDa
                 </div>
             )}
 
-            <header className="sticky top-0 z-50 glass border-b border-slate-200/50 px-3 md:px-6 py-3 flex justify-between items-center bg-white/80 backdrop-blur-md">
-                <div className="flex items-center gap-2 md:gap-3 overflow-hidden">
-                    <div className="bg-slate-900 p-2 rounded-xl md:rounded-2xl shadow-lg shrink-0">
-                        <CurrencyRupeeIcon className="w-5 h-5 md:w-6 md:h-6 text-white" />
+            {/* Main Header */}
+            <header className="sticky top-0 z-50 glass-header px-4 md:px-6 py-3 flex justify-between items-center">
+                {/* Left: Logo + Sync Status */}
+                <div className="flex items-center gap-2.5 overflow-hidden">
+                    <div className="bg-[#b613ec] p-1.5 rounded-xl flex items-center justify-center shadow-lg shadow-[#b613ec]/30 shrink-0">
+                        <span className="material-symbols-outlined text-white text-xl">account_balance_wallet</span>
                     </div>
                     <div className="min-w-0">
-                        <h1 className="text-lg md:text-xl font-black text-slate-900 tracking-tight truncate hidden xs:block">SplitWay</h1>
+                        <h1 className="text-base font-bold text-[#F4F4F8] tracking-tight truncate">SplitWay</h1>
                         <div className="flex items-center gap-1.5">
-                            <div className={`w-1.5 h-1.5 md:w-2 md:h-2 rounded-full sync-dot ${isOffline ? 'bg-rose-500' : (isSyncing ? 'bg-orange-400' : 'bg-emerald-500')}`}></div>
-                            <span className={`text-[9px] md:text-[10px] font-black uppercase tracking-widest truncate ${isOffline ? 'text-rose-500' : 'text-slate-400'}`}>
-                                {isOffline ? 'Offline' : (isSyncing ? 'Syncing...' : 'Realtime')}
-                            </span>
+                            <div className={`w-1.5 h-1.5 rounded-full sync-dot ${syncColor}`} />
+                            <span className="text-[9px] font-bold uppercase tracking-widest text-[rgba(244,244,248,0.4)]">{syncLabel}</span>
                         </div>
                     </div>
                 </div>
 
+                {/* Right: Trip Info + Actions */}
                 <div className="flex items-center gap-2 shrink-0">
-                    {/* Responsive Trip Info Pill */}
+                    {/* Trip destination pill */}
                     {(destination || tripName) && (
-                        <div className="flex flex-col items-end mr-1">
-                            <div className="text-[10px] font-black bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-full border border-indigo-100 flex items-center gap-1.5 uppercase tracking-widest max-w-[140px] truncate">
-                                <MapPinIcon className="w-3 h-3 shrink-0" />
+                        <div className="hidden sm:flex flex-col items-end mr-1">
+                            <div className="text-[10px] font-bold glass-pill text-[#b613ec] px-3 py-1.5 rounded-full border border-[#b613ec]/30 flex items-center gap-1.5 uppercase tracking-widest max-w-[140px] truncate">
+                                <span className="material-symbols-outlined text-xs">location_on</span>
                                 <span className="truncate">{destination || tripName}</span>
                             </div>
                             {startDate && endDate && (
-                                <div className="text-[9px] font-bold text-slate-400 mt-1 flex items-center gap-1 px-1">
-                                    <CalendarDaysIcon className="w-3 h-3" />
-                                    <span>{formatDateRange(startDate, endDate)}</span>
+                                <div className="text-[9px] font-bold text-[rgba(244,244,248,0.3)] mt-1 px-1">
+                                    {formatDateRange(startDate, endDate)}
                                 </div>
                             )}
                         </div>
                     )}
 
+                    {/* PDF Export */}
                     {onExportPDF && tripId && (
                         <button
                             onClick={onExportPDF}
-                            className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold rounded-full uppercase tracking-widest transition-all shadow-lg"
-                            title="Download Complete Trip Report"
+                            className="flex items-center gap-1.5 px-3 py-2 glass-pill text-emerald-400 text-[10px] font-bold rounded-full uppercase tracking-widest border border-emerald-400/20 transition-all hover:bg-emerald-400/10"
+                            title="Download Trip Report"
                         >
-                            <ArrowDownTrayIcon className="w-4 h-4" />
-                            <span className="hidden sm:inline">Download Report</span>
+                            <span className="material-symbols-outlined text-sm">download</span>
+                            <span className="hidden sm:inline">Report</span>
                         </button>
                     )}
 
-                    <button
-                        onClick={() => {
-                            if (!tripId) return;
-                            const shareUrl = `${window.location.origin}/?join=${tripId}`;
-                            const shareData = {
-                                title: 'Join my trip on SplitWay',
-                                text: `Join ${tripName || 'my trip'} on SplitWay! Room Code: ${tripId}`,
-                                url: shareUrl
-                            };
+                    {/* Share */}
+                    {tripId && (
+                        <button
+                            onClick={() => {
+                                const shareUrl = `${window.location.origin}/?join=${tripId}`;
+                                const shareData = { title: 'Join my trip on SplitWay', text: `Join my trip on SplitWay! Room: ${tripId}`, url: shareUrl };
+                                if (navigator.share) {
+                                    navigator.share(shareData).catch(console.error);
+                                } else {
+                                    navigator.clipboard.writeText(shareData.text + " " + shareData.url);
+                                }
+                            }}
+                            className="w-9 h-9 glass-pill rounded-full flex items-center justify-center text-[rgba(244,244,248,0.5)] hover:text-[#b613ec] transition-colors"
+                            title="Share Trip"
+                        >
+                            <span className="material-symbols-outlined text-lg">share</span>
+                        </button>
+                    )}
 
-                            if (navigator.share) {
-                                navigator.share(shareData).catch(console.error);
-                            } else {
-                                navigator.clipboard.writeText(shareData.text + " " + shareData.url);
-                                alert("Link copied to clipboard!");
-                            }
-                        }}
-                        className={tripId ? "p-2 text-indigo-400 hover:text-indigo-600 font-bold transition-colors" : "hidden"}
-                        title="Share Trip Invite"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.287.696.287 1.093s-.107.77-.287 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.935-2.186 2.25 2.25 0 00-3.935 2.186z" />
-                        </svg>
-                    </button>
-
-                    {/* Show Logout if tripId is present OR if showLogout is true */}
+                    {/* Logout */}
                     {(tripId || showLogout) && (
                         <button
                             onClick={() => setShowExitConfirm(true)}
-                            className="p-2 text-slate-400 hover:text-slate-900 font-bold text-[10px] md:text-xs uppercase tracking-widest bg-slate-50 rounded-lg md:bg-transparent md:p-2"
+                            className="w-9 h-9 glass-pill rounded-full flex items-center justify-center text-[rgba(244,244,248,0.4)] hover:text-[#F4F4F8] transition-colors"
+                            title="Leave Trip"
                         >
-                            Logout
+                            <span className="material-symbols-outlined text-lg">logout</span>
                         </button>
                     )}
 
+                    {/* Delete Trip (Creator only) */}
                     {isCreator && onDelete && (
-                        <button onClick={onDelete} className="p-2 text-rose-300 hover:text-rose-600 font-bold transition-colors" title="Delete Trip">
-                            <TrashIcon className="w-5 h-5" />
+                        <button
+                            onClick={onDelete}
+                            className="w-9 h-9 glass-pill rounded-full flex items-center justify-center text-rose-400/60 hover:text-rose-400 hover:bg-rose-400/10 transition-colors"
+                            title="Delete Trip"
+                        >
+                            <span className="material-symbols-outlined text-lg">delete</span>
                         </button>
                     )}
                 </div>

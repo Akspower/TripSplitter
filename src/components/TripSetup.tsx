@@ -1,410 +1,299 @@
 import React, { useState } from 'react';
-import { IdentificationIcon, PlusIcon, TrashIcon, LockClosedIcon, SparklesIcon } from '@heroicons/react/24/outline';
 import { TripService } from '../services/tripService';
 import type { Trip, Member, TripStyle, BudgetType, AgeGroup } from '../types';
 import { getAvatarColor } from './MemberAvatar';
 import toast from 'react-hot-toast';
+import { motion, AnimatePresence } from 'framer-motion';
 
-const TripSetup: React.FC<{ onComplete: (trip: Trip, myId: string) => void, onBack: () => void }> = ({ onComplete, onBack }) => {
+const gradients = [
+    'from-violet-500 to-[#b613ec]', 'from-emerald-400 to-teal-600',
+    'from-rose-400 to-pink-600', 'from-amber-400 to-orange-500',
+    'from-blue-400 to-indigo-600', 'from-cyan-400 to-blue-500',
+];
+
+const TOTAL_STEPS = 4;
+
+const TripSetup: React.FC<{ onComplete: (trip: Trip, myId: string) => void; onBack: () => void }> = ({ onComplete, onBack }) => {
     const [step, setStep] = useState(1);
     const [creatorName, setCreatorName] = useState('');
     const [formData, setFormData] = useState({ name: '', destination: '', startDate: '', endDate: '' });
-    const [members, setMembers] = useState<{ id: string, name: string }[]>([]);
+    const [members, setMembers] = useState<{ id: string; name: string }[]>([]);
     const [newMember, setNewMember] = useState('');
     const [isCreating, setIsCreating] = useState(false);
-
-    // V3: Security & Profile
     const [adminPin, setAdminPin] = useState('');
     const [tripStyle, setTripStyle] = useState<TripStyle>('adventure');
     const [budgetType, setBudgetType] = useState<BudgetType>('moderate');
     const [ageGroup, setAgeGroup] = useState<AgeGroup>('mixed');
 
-    // History API Integration for Hardware Back Button
     React.useEffect(() => {
-        // Push state when component mounts or step changes
         window.history.pushState({ step }, `Step ${step}`, window.location.search);
-
-        const handlePopState = (event: PopStateEvent) => {
-            if (event.state && event.state.step) {
-                // If we have state history, go to that step
-                if (event.state.step < step) {
-                    setStep(event.state.step);
-                }
-            } else {
-                // If popping to initial state/outside, let's treat as "Back" from Step 1
-                if (step === 1) {
-                    onBack();
-                } else {
-                    setStep(step - 1);
-                }
-            }
+        const handlePop = (e: PopStateEvent) => {
+            if (e.state?.step && e.state.step < step) setStep(e.state.step);
+            else if (step === 1) onBack();
+            else setStep(step - 1);
         };
-
-        window.addEventListener('popstate', handlePopState);
-        return () => window.removeEventListener('popstate', handlePopState);
+        window.addEventListener('popstate', handlePop);
+        return () => window.removeEventListener('popstate', handlePop);
     }, [step, onBack]);
 
-    // Persistence Logic: Load
     React.useEffect(() => {
-        const savedState = localStorage.getItem('trip_setup_state');
-        if (savedState) {
+        const saved = localStorage.getItem('trip_setup_state');
+        if (saved && step === 1) {
             try {
-                const parsed = JSON.parse(savedState);
-                // Only restore if we are at step 1 (initial load) to avoid overwriting during navigation
-                if (step === 1) {
-                    if (parsed.step) setStep(parsed.step);
-                    if (parsed.creatorName) setCreatorName(parsed.creatorName);
-                    if (parsed.formData) setFormData(parsed.formData);
-                    if (parsed.members) setMembers(parsed.members);
-                    if (parsed.adminPin) setAdminPin(parsed.adminPin);
-                    if (parsed.tripStyle) setTripStyle(parsed.tripStyle);
-                    if (parsed.budgetType) setBudgetType(parsed.budgetType);
-                    if (parsed.ageGroup) setAgeGroup(parsed.ageGroup);
-                }
-            } catch (e) {
-                console.error("Failed to load saved state", e);
-            }
+                const p = JSON.parse(saved);
+                if (p.step) setStep(p.step);
+                if (p.creatorName) setCreatorName(p.creatorName);
+                if (p.formData) setFormData(p.formData);
+                if (p.members) setMembers(p.members);
+                if (p.adminPin) setAdminPin(p.adminPin);
+                if (p.tripStyle) setTripStyle(p.tripStyle);
+                if (p.budgetType) setBudgetType(p.budgetType);
+                if (p.ageGroup) setAgeGroup(p.ageGroup);
+            } catch { }
         }
     }, []);
 
-    // Persistence Logic: Save
     React.useEffect(() => {
-        const state = { step, creatorName, formData, members, adminPin, tripStyle, budgetType, ageGroup };
-        localStorage.setItem('trip_setup_state', JSON.stringify(state));
+        localStorage.setItem('trip_setup_state', JSON.stringify({ step, creatorName, formData, members, adminPin, tripStyle, budgetType, ageGroup }));
     }, [step, creatorName, formData, members, adminPin, tripStyle, budgetType, ageGroup]);
 
-    // Validation function for Step 2
     const handleNextFromStep2 = () => {
-        if (!formData.name.trim()) {
-            toast.error('Please enter a trip name');
-            return;
-        }
-        if (!formData.destination.trim()) {
-            toast.error('Please enter a destination');
-            return;
-        }
-        if (!formData.startDate) {
-            toast.error('Please select a start date');
-            return;
-        }
-        if (!formData.endDate) {
-            toast.error('Please select an end date');
-            return;
-        }
-        if (new Date(formData.endDate) < new Date(formData.startDate)) {
-            toast.error('End date must be on or after start date');
-            return;
-        }
+        if (!formData.name.trim()) { toast.error('Enter a trip name'); return; }
+        if (!formData.destination.trim()) { toast.error('Enter a destination'); return; }
+        if (!formData.startDate) { toast.error('Select a start date'); return; }
+        if (!formData.endDate) { toast.error('Select an end date'); return; }
+        if (new Date(formData.endDate) < new Date(formData.startDate)) { toast.error('End date must be after start date'); return; }
         setStep(3);
     };
 
     const addMember = () => {
-        const trimmedName = newMember.trim();
-
-        if (!trimmedName) {
-            toast.error('Please enter a member name');
-            return;
-        }
-
-        if (trimmedName.length > 30) {
-            toast.error('Name is too long (max 30 characters)');
-            return;
-        }
-
-        // Check for duplicate (case-insensitive)
-        if (members.some(m => m.name.toLowerCase() === trimmedName.toLowerCase())) {
-            toast.error(`${trimmedName} is already added`);
-            return;
-        }
-
-        // Check if creator name matches
-        if (creatorName.toLowerCase() === trimmedName.toLowerCase()) {
-            toast.error(`You (${creatorName}) are already part of the trip`);
-            return;
-        }
-
-        // Check member limit
-        if (members.length >= 20) {
-            toast.error('Maximum 20 members allowed');
-            return;
-        }
-
-        setMembers([...members, {
-            id: Math.random().toString(36).substr(2, 9),
-            name: trimmedName
-        }]);
+        const name = newMember.trim();
+        if (!name) { toast.error('Enter a member name'); return; }
+        if (name.length > 30) { toast.error('Name too long (max 30 chars)'); return; }
+        if (members.some(m => m.name.toLowerCase() === name.toLowerCase())) { toast.error(`${name} already added`); return; }
+        if (creatorName.toLowerCase() === name.toLowerCase()) { toast.error(`You (${creatorName}) are already in the trip`); return; }
+        if (members.length >= 20) { toast.error('Max 20 members'); return; }
+        setMembers([...members, { id: Math.random().toString(36).substr(2, 9), name }]);
         setNewMember('');
-        toast.success(`✓ ${trimmedName} added to the trip`);
+        toast.success(`✓ ${name} added`);
     };
 
     const finishSetup = async () => {
-        if (members.length === 0) {
-            toast.error('Add at least one other person to split expenses with');
-            return;
-        }
-
+        if (!members.length) { toast.error('Add at least one other person'); return; }
         setIsCreating(true);
         const creatorId = Math.random().toString(36).substr(2, 9);
-        // Use 6-digit ID for easier sharing
         const tripId = Math.floor(100000 + Math.random() * 900000).toString();
-
         const allMembers: Member[] = [
             { id: creatorId, name: creatorName, isCreator: true, avatarColor: getAvatarColor(0) },
-            ...members.map((m, idx) => ({ id: m.id, name: m.name, isCreator: false, avatarColor: getAvatarColor(idx + 1) }))
+            ...members.map((m, i) => ({ id: m.id, name: m.name, isCreator: false, avatarColor: getAvatarColor(i + 1) }))
         ];
-
-        const newTrip: Trip = {
-            id: tripId,
-            ...formData,
-            members: allMembers,
-            expenses: [],
-            creatorId,
-            adminPin: adminPin || undefined,
-            tripStyle,
-            budgetType,
-            ageGroup
-        };
-
+        const newTrip: Trip = { id: tripId, ...formData, members: allMembers, expenses: [], creatorId, adminPin: adminPin || undefined, tripStyle, budgetType, ageGroup };
         const result = await TripService.createTrip(newTrip);
-
         if (result.success) {
             localStorage.removeItem('trip_setup_state');
-            toast.success('Trip created successfully!');
+            toast.success('Trip created!');
             onComplete(newTrip, creatorId);
         } else {
-            toast.error(`Failed to create trip: ${result.error || "Unknown error"}`);
+            toast.error(`Failed: ${result.error || 'Unknown error'}`);
             setIsCreating(false);
         }
     };
 
-    return (
-        <div className="max-w-md mx-auto p-4 sm:p-8 mt-6 w-full relative">
-            {/* Close / Cancel Button */}
-            <button
-                onClick={() => {
-                    localStorage.removeItem('trip_setup_state');
-                    onBack();
-                }}
-                className="absolute top-4 right-4 p-2 text-slate-300 hover:text-slate-500 transition-colors rounded-full hover:bg-slate-100"
-            >
-                <TrashIcon className="w-6 h-6" />
-                <span className="sr-only">Cancel Setup</span>
-            </button>
+    const stepVariants = {
+        initial: { opacity: 0, x: 20 },
+        animate: { opacity: 1, x: 0 },
+        exit: { opacity: 0, x: -20 },
+    };
 
-            <div className="flex justify-between gap-4 mb-16">
-                {[1, 2, 3, 4].map((s) => (
-                    <div key={s} className={`h-1.5 rounded-full flex-1 transition-all duration-700 ${step >= s ? 'bg-slate-900 shadow-lg' : 'bg-slate-200'}`} />
+    // Input class helper
+    const inputCls = "w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-[#F4F4F8] font-bold focus:outline-none focus:ring-2 focus:ring-[#b613ec]/40 placeholder:text-[rgba(244,244,248,0.2)] text-base";
+
+    return (
+        <div className="max-w-md mx-auto p-4 sm:p-6 mt-2 w-full relative">
+            {/* Cancel */}
+            <div className="flex items-center justify-between mb-8">
+                <button onClick={() => { if (step > 1) setStep(step - 1); else { localStorage.removeItem('trip_setup_state'); onBack(); } }}
+                    className="w-10 h-10 glass-pill rounded-full flex items-center justify-center text-[rgba(244,244,248,0.4)] hover:text-[#F4F4F8] transition-colors">
+                    <span className="material-symbols-outlined text-lg">arrow_back_ios_new</span>
+                </button>
+                <h2 className="text-base font-bold text-[#F4F4F8] tracking-tight">Trip Setup</h2>
+                <button onClick={() => { localStorage.removeItem('trip_setup_state'); onBack(); }}
+                    className="w-10 h-10 glass-pill rounded-full flex items-center justify-center text-[rgba(244,244,248,0.4)] hover:text-rose-400 transition-colors">
+                    <span className="material-symbols-outlined text-lg">close</span>
+                </button>
+            </div>
+
+            {/* Progress dots */}
+            <div className="flex items-center justify-center gap-3 mb-8">
+                {Array.from({ length: TOTAL_STEPS }, (_, i) => (
+                    <div key={i} className={`rounded-full transition-all duration-500 ${step === i + 1 ? 'h-2 w-8 bg-[#b613ec] shadow-[0_0_12px_rgba(182,19,236,0.6)]'
+                        : step > i + 1 ? 'h-2 w-2 bg-[#b613ec]/50'
+                            : 'h-2 w-2 bg-white/15'
+                        }`} />
                 ))}
             </div>
 
-            {step === 1 && (
-                <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8">
-                    <div className="flex flex-col items-center text-center">
-                        <div className="bg-indigo-600 p-5 rounded-[32px] shadow-2xl shadow-indigo-200 mb-6">
-                            <IdentificationIcon className="w-12 h-12 text-white" />
+            <AnimatePresence mode="wait">
+                {/* ── Step 1: Who are you ── */}
+                {step === 1 && (
+                    <motion.div key="s1" variants={stepVariants} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.25 }} className="space-y-7">
+                        <div className="text-center">
+                            <div className="w-16 h-16 bg-[#b613ec]/20 border border-[#b613ec]/30 rounded-2xl flex items-center justify-center mx-auto mb-5">
+                                <span className="material-symbols-outlined text-[#b613ec] text-3xl">badge</span>
+                            </div>
+                            <h2 className="text-3xl font-bold text-[#F4F4F8] tracking-tight mb-2">Who are you?</h2>
+                            <p className="text-[rgba(244,244,248,0.4)] text-sm">We need your name to calculate your personal share</p>
                         </div>
-                        <h2 className="text-4xl font-black text-slate-900 tracking-tighter mb-2">Who are you?</h2>
-                        <p className="text-slate-500 font-medium">To calculate YOUR personal share, we need your name first.</p>
-                    </div>
-                    <div className="bg-white p-6 rounded-[32px] shadow-2xl shadow-slate-100 border border-white">
-                        <label className="block text-[10px] font-black text-slate-400 uppercase mb-3 tracking-[0.2em]">Your Identity</label>
-                        <input
-                            autoFocus
-                            type="text"
-                            maxLength={30}
-                            className="w-full bg-slate-50 border-none rounded-2xl px-6 py-5 focus:ring-2 focus:ring-indigo-500 outline-none font-bold text-xl"
-                            placeholder="Ex: Aman"
-                            value={creatorName}
-                            onChange={(e) => setCreatorName(e.target.value)}
-                        />
-                    </div>
-                    <button
-                        disabled={!creatorName.trim()}
-                        onClick={() => setStep(2)}
-                        className="w-full bg-slate-900 text-white py-6 rounded-[24px] font-black text-xl shadow-2xl transition-all active:scale-95 disabled:opacity-30"
-                    >
-                        Start Trip Planner
-                    </button>
-                </div>
-            )}
+                        <div className="glass-card rounded-2xl p-5 border border-white/8">
+                            <label className="block text-[10px] font-bold text-[rgba(244,244,248,0.35)] uppercase tracking-widest mb-3">Your Name</label>
+                            <input autoFocus type="text" maxLength={30} className={inputCls} placeholder="Ex: Arjun" value={creatorName} onChange={e => setCreatorName(e.target.value)} onKeyDown={e => e.key === 'Enter' && creatorName.trim() && setStep(2)} />
+                        </div>
+                        <motion.button whileTap={{ scale: 0.97 }} disabled={!creatorName.trim()} onClick={() => setStep(2)} className="w-full btn-primary py-5 rounded-full font-bold text-lg disabled:opacity-30">
+                            Start Planner →
+                        </motion.button>
+                    </motion.div>
+                )}
 
-            {step === 2 && (
-                <div className="space-y-6 animate-in fade-in slide-in-from-right-8">
-                    <h2 className="text-3xl font-black text-slate-900 tracking-tight">Trip Blueprint 🗺️</h2>
-                    <div className="space-y-4">
-                        <div className="bg-white p-6 rounded-[28px] shadow-xl border border-slate-50">
-                            <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 tracking-widest">Adventure Title</label>
-                            <input type="text" maxLength={50} className="w-full bg-transparent border-none px-0 py-1 focus:ring-0 outline-none font-black text-2xl" placeholder="Goa Road Trip" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
+                {/* ── Step 2: Trip Details ── */}
+                {step === 2 && (
+                    <motion.div key="s2" variants={stepVariants} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.25 }} className="space-y-5">
+                        <div>
+                            <h2 className="text-3xl font-bold text-[#F4F4F8] tracking-tight mb-1">Trip Blueprint 🗺️</h2>
+                            <p className="text-[rgba(244,244,248,0.4)] text-sm">Where are you headed?</p>
                         </div>
-                        <div className="bg-white p-6 rounded-[28px] shadow-xl border border-slate-50">
-                            <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 tracking-widest">The Map Says...</label>
-                            <input type="text" maxLength={50} className="w-full bg-transparent border-none px-0 py-1 focus:ring-0 outline-none font-bold text-lg" placeholder="Ex: South Goa" value={formData.destination} onChange={(e) => setFormData({ ...formData, destination: e.target.value })} />
+                        <div className="glass-card rounded-2xl p-5 border border-white/8 space-y-1">
+                            <label className="block text-[10px] font-bold text-[rgba(244,244,248,0.35)] uppercase tracking-widest mb-2">Trip Name</label>
+                            <input type="text" maxLength={50} className={inputCls} placeholder="Goa Road Trip 🏖️" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
+                        </div>
+                        <div className="glass-card rounded-2xl p-5 border border-white/8">
+                            <label className="block text-[10px] font-bold text-[rgba(244,244,248,0.35)] uppercase tracking-widest mb-2">Destination</label>
+                            <input type="text" maxLength={50} className={inputCls} placeholder="South Goa, India" value={formData.destination} onChange={e => setFormData({ ...formData, destination: e.target.value })} />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
-                            <div className="bg-white p-6 rounded-[28px] shadow-xl border border-slate-50">
-                                <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 tracking-widest">Start</label>
-                                <input
-                                    type="date"
-                                    required
-                                    className="w-full bg-transparent border-none px-0 py-1 focus:ring-0 outline-none font-bold"
-                                    value={formData.startDate}
-                                    min={new Date().toLocaleDateString('en-CA')} // Min today (Local time)
-                                    onChange={(e) => {
-                                        const newStart = e.target.value;
-                                        setFormData(prev => ({
-                                            ...prev,
-                                            startDate: newStart,
-                                            // Reset end date if it's before new start date
-                                            endDate: prev.endDate && prev.endDate < newStart ? '' : prev.endDate
-                                        }))
-                                    }}
-                                />
+                            <div className="glass-card rounded-2xl p-4 border border-white/8">
+                                <label className="block text-[10px] font-bold text-[rgba(244,244,248,0.35)] uppercase tracking-widest mb-2">Start Date</label>
+                                <input type="date" required className="w-full bg-transparent text-[#F4F4F8] font-bold focus:outline-none text-sm" value={formData.startDate} min={new Date().toISOString().split('T')[0]}
+                                    onChange={e => setFormData(prev => ({ ...prev, startDate: e.target.value, endDate: prev.endDate && prev.endDate < e.target.value ? '' : prev.endDate }))} />
                             </div>
-                            <div className="bg-white p-6 rounded-[28px] shadow-xl border border-slate-50">
-                                <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 tracking-widest">End</label>
-                                <input
-                                    type="date"
-                                    required
-                                    className="w-full bg-transparent border-none px-0 py-1 focus:ring-0 outline-none font-bold"
-                                    value={formData.endDate}
-                                    min={formData.startDate || new Date().toLocaleDateString('en-CA')} // Min start date or today (Local)
-                                    disabled={!formData.startDate}
-                                    onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                                />
+                            <div className="glass-card rounded-2xl p-4 border border-white/8">
+                                <label className="block text-[10px] font-bold text-[rgba(244,244,248,0.35)] uppercase tracking-widest mb-2">End Date</label>
+                                <input type="date" required className="w-full bg-transparent text-[#F4F4F8] font-bold focus:outline-none text-sm" value={formData.endDate} min={formData.startDate || new Date().toISOString().split('T')[0]}
+                                    onChange={e => setFormData({ ...formData, endDate: e.target.value })} />
                             </div>
                         </div>
-                    </div>
-                    <div className="flex gap-4">
-                        <button onClick={() => setStep(1)} className="flex-1 bg-slate-100 text-slate-500 py-5 rounded-[24px] font-bold">Back</button>
-                        <button
-                            disabled={!formData.name || !formData.destination || !formData.startDate || !formData.endDate}
-                            onClick={handleNextFromStep2}
-                            className="flex-[2] bg-slate-900 text-white py-5 rounded-[24px] font-black text-xl shadow-xl transition-opacity disabled:opacity-30"
-                        >
-                            Add The Squad
-                        </button>
-                    </div>
-                </div>
-            )}
+                        <motion.button whileTap={{ scale: 0.97 }} onClick={handleNextFromStep2} className="w-full btn-primary py-5 rounded-full font-bold text-lg">
+                            Add the Squad →
+                        </motion.button>
+                    </motion.div>
+                )}
 
-            {step === 3 && (
-                <div className="space-y-6 animate-in fade-in slide-in-from-right-8">
-                    <h2 className="text-3xl font-black text-slate-900 tracking-tight">The Squad 👥</h2>
-                    <div className="flex gap-3">
-                        <input
-                            type="text"
-                            maxLength={30}
-                            className="flex-1 bg-white border border-slate-100 rounded-[24px] px-6 py-5 focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm font-bold"
-                            placeholder="Friend's Name"
-                            value={newMember}
-                            onChange={(e) => setNewMember(e.target.value)}
-                            onKeyPress={(e) => e.key === 'Enter' && addMember()}
-                        />
-                        <button onClick={addMember} className="bg-indigo-600 text-white p-5 rounded-[24px] shadow-lg"><PlusIcon className="w-6 h-6" /></button>
-                    </div>
-
-                    <div className="space-y-3 max-h-72 overflow-y-auto pr-2 custom-scrollbar">
-                        <div className="flex items-center gap-4 bg-indigo-50 p-6 rounded-[32px] border border-indigo-100 shadow-sm">
-                            <div className="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center font-black text-white shadow-lg">You</div>
-                            <span className="font-bold text-indigo-700 text-lg">{creatorName}</span>
+                {/* ── Step 3: Add Members ── */}
+                {step === 3 && (
+                    <motion.div key="s3" variants={stepVariants} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.25 }} className="space-y-5">
+                        <div>
+                            <h2 className="text-3xl font-bold text-[#F4F4F8] tracking-tight mb-1">The Squad 👥</h2>
+                            <p className="text-[rgba(244,244,248,0.4)] text-sm">Who's coming along?</p>
                         </div>
-                        {members.map(m => (
-                            <div key={m.id} className="flex justify-between items-center bg-white p-6 rounded-[32px] border border-slate-50 shadow-md card-3d">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center font-black text-slate-600 text-lg">{m.name.charAt(0)}</div>
-                                    <span className="font-bold text-slate-700 text-lg">{m.name}</span>
+
+                        {/* Add input */}
+                        <div className="flex gap-3">
+                            <input type="text" maxLength={30} className={`${inputCls} flex-1`} placeholder="Friend's name..."
+                                value={newMember} onChange={e => setNewMember(e.target.value)}
+                                onKeyDown={e => e.key === 'Enter' && addMember()} />
+                            <button onClick={addMember} className="btn-primary w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0">
+                                <span className="material-symbols-outlined text-xl">add</span>
+                            </button>
+                        </div>
+
+                        {/* Members list */}
+                        <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
+                            {/* Creator row */}
+                            <div className="flex items-center gap-4 glass-card-primary p-4 rounded-2xl border border-[#b613ec]/20">
+                                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-violet-500 to-[#b613ec] flex items-center justify-center font-bold text-white text-sm">
+                                    {creatorName.charAt(0).toUpperCase()}
                                 </div>
-                                <button onClick={() => setMembers(members.filter(mem => mem.id !== m.id))} className="text-slate-300 hover:text-red-500 p-2"><TrashIcon className="w-6 h-6" /></button>
+                                <div>
+                                    <span className="font-bold text-[#F4F4F8]">{creatorName}</span>
+                                    <p className="text-[10px] font-bold text-[#b613ec] uppercase tracking-widest">You (Admin)</p>
+                                </div>
                             </div>
-                        ))}
-                    </div>
-
-                    <div className="flex gap-4 pt-6">
-                        <button onClick={() => setStep(2)} className="flex-1 bg-slate-100 text-slate-500 py-6 rounded-[24px] font-bold">Back</button>
-                        <button
-                            onClick={() => setStep(4)}
-                            className="flex-[2] bg-slate-900 text-white py-6 rounded-[24px] font-black text-xl shadow-2xl"
-                        >
-                            Trip Settings
-                        </button>
-                    </div>
-                </div>
-            )}
-
-            {step === 4 && (
-                <div className="space-y-6 animate-in fade-in slide-in-from-right-8">
-                    <div className="flex items-center gap-3 mb-2">
-                        <SparklesIcon className="w-8 h-8 text-indigo-500" />
-                        <h2 className="text-3xl font-black text-slate-900 tracking-tight">Trip Profile</h2>
-                    </div>
-                    <p className="text-slate-500 text-sm font-medium">Help our AI Guide give you better suggestions!</p>
-
-                    {/* Trip Style */}
-                    <div className="bg-white p-6 rounded-[28px] shadow-xl border border-slate-50">
-                        <label className="block text-[10px] font-black text-slate-400 uppercase mb-3 tracking-widest">Trip Vibe</label>
-                        <div className="grid grid-cols-2 gap-3">
-                            {[{ v: 'adventure', l: '🏔️ Adventure', d: 'Thrills & Explore' }, { v: 'relaxed', l: '🏖️ Relaxed', d: 'Chill & Unwind' }, { v: 'budget', l: '💰 Budget', d: 'Max Value' }, { v: 'luxury', l: '✨ Luxury', d: 'Premium Experience' }].map(opt => (
-                                <button key={opt.v} onClick={() => setTripStyle(opt.v as TripStyle)} className={`p-4 rounded-2xl text-left transition-all ${tripStyle === opt.v ? 'bg-indigo-600 text-white shadow-lg scale-[1.02]' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>
-                                    <span className="font-black text-sm">{opt.l}</span>
-                                    <span className="block text-[10px] opacity-70">{opt.d}</span>
-                                </button>
+                            {members.map((m, i) => (
+                                <div key={m.id} className="flex justify-between items-center glass-card p-4 rounded-2xl border border-white/5">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`w-11 h-11 rounded-xl flex items-center justify-center font-bold text-white bg-gradient-to-br ${gradients[(i + 1) % gradients.length]}`}>
+                                            {m.name.charAt(0)}
+                                        </div>
+                                        <span className="font-bold text-[#F4F4F8] text-sm">{m.name}</span>
+                                    </div>
+                                    <button onClick={() => setMembers(members.filter(mem => mem.id !== m.id))}
+                                        className="p-2 text-rose-400/40 hover:text-rose-400 hover:bg-rose-400/10 rounded-xl transition-colors">
+                                        <span className="material-symbols-outlined text-base">person_remove</span>
+                                    </button>
+                                </div>
                             ))}
                         </div>
-                    </div>
 
-                    {/* Budget Type */}
-                    <div className="bg-white p-6 rounded-[28px] shadow-xl border border-slate-50">
-                        <label className="block text-[10px] font-black text-slate-400 uppercase mb-3 tracking-widest">Budget Style</label>
-                        <div className="flex gap-3">
-                            {[{ v: 'backpacker', l: '🎒 Backpacker' }, { v: 'moderate', l: '⚖️ Moderate' }, { v: 'splurge', l: '💎 Splurge' }].map(opt => (
-                                <button key={opt.v} onClick={() => setBudgetType(opt.v as BudgetType)} className={`flex-1 py-4 px-3 rounded-2xl font-black text-sm transition-all ${budgetType === opt.v ? 'bg-emerald-500 text-white shadow-lg' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>
-                                    {opt.l}
-                                </button>
-                            ))}
+                        <motion.button whileTap={{ scale: 0.97 }} onClick={() => setStep(4)} disabled={members.length === 0} className="w-full btn-primary py-5 rounded-full font-bold text-lg disabled:opacity-30">
+                            Trip Settings →
+                        </motion.button>
+                    </motion.div>
+                )}
+
+                {/* ── Step 4: Trip Profile ── */}
+                {step === 4 && (
+                    <motion.div key="s4" variants={stepVariants} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.25 }} className="space-y-5">
+                        <div>
+                            <h2 className="text-3xl font-bold text-[#F4F4F8] tracking-tight mb-1">Trip Profile ✨</h2>
+                            <p className="text-[rgba(244,244,248,0.4)] text-sm">Help our AI give you better suggestions</p>
                         </div>
-                    </div>
 
-                    {/* Age Group */}
-                    <div className="bg-white p-6 rounded-[28px] shadow-xl border border-slate-50">
-                        <label className="block text-[10px] font-black text-slate-400 uppercase mb-3 tracking-widest">Squad Type</label>
-                        <div className="flex gap-3">
-                            {[{ v: 'youth', l: '🎉 Youth' }, { v: 'mixed', l: '👥 Mixed' }, { v: 'family', l: '👨‍👩‍👧 Family' }, { v: 'seniors', l: '🌅 Seniors' }].map(opt => (
-                                <button key={opt.v} onClick={() => setAgeGroup(opt.v as AgeGroup)} className={`flex-1 py-4 px-2 rounded-2xl font-black text-xs transition-all ${ageGroup === opt.v ? 'bg-amber-500 text-white shadow-lg' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>
-                                    {opt.l}
-                                </button>
-                            ))}
+                        {/* Trip Vibe */}
+                        <div className="glass-card rounded-2xl p-5 border border-white/8">
+                            <label className="block text-[10px] font-bold text-[#b613ec] uppercase tracking-widest mb-3">Trip Vibe</label>
+                            <div className="grid grid-cols-2 gap-2.5">
+                                {[{ v: 'adventure', l: '🏔️ Adventure', d: 'Thrills & Explore' }, { v: 'relaxed', l: '🏖️ Relaxed', d: 'Chill & Unwind' }, { v: 'budget', l: '💰 Budget', d: 'Max Value' }, { v: 'luxury', l: '✨ Luxury', d: 'Premium Experience' }].map(opt => (
+                                    <button key={opt.v} onClick={() => setTripStyle(opt.v as TripStyle)}
+                                        className={`p-4 rounded-2xl text-left transition-all duration-200 ${tripStyle === opt.v ? 'bg-[#b613ec] shadow-lg shadow-[#b613ec]/30' : 'bg-white/5 hover:bg-white/8'}`}>
+                                        <span className="font-bold text-sm text-[#F4F4F8] block">{opt.l}</span>
+                                        <span className="text-[10px] text-[rgba(244,244,248,0.5)]">{opt.d}</span>
+                                    </button>
+                                ))}
+                            </div>
                         </div>
-                    </div>
 
-                    {/* Admin PIN */}
-                    <div className="bg-slate-900 p-6 rounded-[28px] shadow-xl">
-                        <div className="flex items-center gap-3 mb-3">
-                            <LockClosedIcon className="w-5 h-5 text-indigo-400" />
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Admin PIN (Optional)</label>
+                        {/* Budget Style */}
+                        <div className="glass-card rounded-2xl p-5 border border-white/8">
+                            <label className="block text-[10px] font-bold text-[#b613ec] uppercase tracking-widest mb-3">Budget Style</label>
+                            <div className="flex gap-2">
+                                {[{ v: 'backpacker', l: '🎒 Backpacker' }, { v: 'moderate', l: '⚖️ Moderate' }, { v: 'splurge', l: '💎 Splurge' }].map(opt => (
+                                    <button key={opt.v} onClick={() => setBudgetType(opt.v as BudgetType)}
+                                        className={`flex-1 py-3.5 px-2 rounded-2xl font-bold text-xs transition-all ${budgetType === opt.v ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/25' : 'bg-white/5 text-[rgba(244,244,248,0.4)]'}`}>
+                                        {opt.l}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
-                        <input
-                            type="password"
-                            maxLength={4}
-                            className="w-full bg-slate-800 border-none rounded-2xl px-6 py-4 focus:ring-2 focus:ring-indigo-500 outline-none font-black text-2xl text-white text-center tracking-[0.5em]"
-                            placeholder="••••"
-                            value={adminPin}
-                            onChange={(e) => setAdminPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                        />
-                        <p className="text-slate-500 text-xs mt-2 text-center">4-digit PIN to protect trip deletion</p>
-                    </div>
 
-                    <div className="flex gap-4 pt-4">
-                        <button onClick={() => setStep(3)} className="flex-1 bg-slate-100 text-slate-500 py-6 rounded-[24px] font-bold">Back</button>
-                        <button
-                            disabled={isCreating}
-                            onClick={finishSetup}
-                            className="flex-[2] bg-indigo-600 text-white py-6 rounded-[24px] font-black text-xl shadow-2xl disabled:opacity-70 disabled:animate-pulse"
-                        >
-                            {isCreating ? 'Creating...' : '🚀 Launch Trip'}
-                        </button>
-                    </div>
-                </div>
-            )}
+                        {/* Admin PIN */}
+                        <div className="glass-card rounded-2xl p-5 border border-white/8">
+                            <div className="flex items-center gap-2 mb-3">
+                                <span className="material-symbols-outlined text-[rgba(244,244,248,0.35)] text-lg">lock</span>
+                                <label className="text-[10px] font-bold text-[rgba(244,244,248,0.35)] uppercase tracking-widest">Admin PIN (Optional)</label>
+                            </div>
+                            <input type="password" maxLength={4}
+                                className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-[#F4F4F8] font-bold text-2xl text-center tracking-[0.5em] focus:outline-none focus:ring-2 focus:ring-[#b613ec]/40 placeholder:text-[rgba(244,244,248,0.2)]"
+                                placeholder="••••" value={adminPin}
+                                onChange={e => setAdminPin(e.target.value.replace(/\D/g, '').slice(0, 4))} />
+                            <p className="text-[rgba(244,244,248,0.25)] text-xs mt-2 text-center">Protects admin actions. Leave blank to skip.</p>
+                        </div>
+
+                        <motion.button whileTap={{ scale: 0.97 }} disabled={isCreating} onClick={finishSetup}
+                            className="w-full btn-primary py-5 rounded-full font-bold text-lg disabled:opacity-60 disabled:animate-pulse">
+                            {isCreating ? 'Creating Trip...' : '🚀 Launch Trip'}
+                        </motion.button>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

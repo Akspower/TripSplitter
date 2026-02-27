@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
   <!-- PWA Meta Tags -->
-  <meta name="theme-color" content="#4F46E5" />
+  <meta name="theme-color" content="#0A0A0F" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -18,41 +18,99 @@
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   <link rel="manifest" href="/manifest.json" />
 
-  <title>SplitWay Pro - Smart India Trip Splitter</title>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
-    rel="stylesheet">
+  <title>SplitWay — Smart Trip Splitter</title>
+
+  <!-- Space Grotesk Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet" />
+
+  <!-- Material Symbols -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+    rel="stylesheet" />
+
   <style>
     :root {
-      --depth-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.1);
-      --neo-surface: #f8fafc;
+      --primary: #b613ec;
+      --primary-glow: rgba(182, 19, 236, 0.3);
+      --primary-subtle: rgba(182, 19, 236, 0.08);
+      --bg-base: #0A0A0F;
+      --bg-surface: rgba(255, 255, 255, 0.04);
+      --border-glass: rgba(255, 255, 255, 0.08);
+      --text-primary: #F4F4F8;
+      --text-secondary: rgba(244, 244, 248, 0.5);
+      --text-muted: rgba(244, 244, 248, 0.25);
+      --success: #10B981;
+      --danger: #EF4444;
+      --shadow-card: 0 24px 64px rgba(0, 0, 0, 0.5);
+    }
+
+    * {
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html {
+      scroll-behavior: smooth;
     }
 
     body {
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      background-color: var(--neo-surface);
-      color: #0f172a;
+      font-family: 'Space Grotesk', sans-serif;
+      background-color: var(--bg-base);
+      color: var(--text-primary);
       overflow-x: hidden;
+      min-height: 100dvh;
+      overscroll-behavior-y: none;
     }
 
-    .glass {
-      background: rgba(255, 255, 255, 0.75);
+    /* Glass card utility */
+    .glass-card {
+      background: rgba(255, 255, 255, 0.04);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .glass-card-primary {
+      background: rgba(182, 19, 236, 0.06);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(182, 19, 236, 0.2);
+    }
+
+    .glass-pill {
+      background: rgba(255, 255, 255, 0.04);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    /* Header glass */
+    .glass-header {
+      background: rgba(10, 10, 15, 0.85);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
     }
 
-    .card-3d {
-      transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s ease;
-      transform: perspective(1000px) rotateX(0deg);
+    /* Primary glow button */
+    .btn-primary {
+      background: var(--primary);
+      box-shadow: 0 8px 32px var(--primary-glow);
+      border-top: 1px solid rgba(255, 255, 255, 0.15);
+      transition: box-shadow 0.2s, transform 0.15s;
     }
 
-    .card-3d:active {
-      transform: perspective(1000px) scale(0.98);
+    .btn-primary:hover {
+      box-shadow: 0 8px 48px rgba(182, 19, 236, 0.5);
     }
 
-    .floating-dock {
-      box-shadow: 0 -10px 40px -10px rgba(0, 0, 0, 0.1);
+    .btn-primary:active {
+      transform: scale(0.97);
     }
 
+    /* Sync dot animation */
     @keyframes pulse-sync {
 
       0%,
@@ -63,7 +121,7 @@
 
       50% {
         opacity: 0.5;
-        transform: scale(0.9);
+        transform: scale(0.85);
       }
     }
 
@@ -71,28 +129,25 @@
       animation: pulse-sync 2s infinite;
     }
 
-    .custom-scrollbar::-webkit-scrollbar {
-      width: 4px;
+    /* Floating dock animation */
+    @keyframes float {
+
+      0%,
+      100% {
+        transform: translateX(-50%) translateY(0);
+      }
+
+      50% {
+        transform: translateX(-50%) translateY(-3px);
+      }
     }
 
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-      background: #e2e8f0;
-      border-radius: 10px;
+    .floating-dock {
+      animation: float 4s ease-in-out infinite;
     }
 
-    /* Hide scrollbar for Chrome, Safari and Opera */
-    .no-scrollbar::-webkit-scrollbar {
-      display: none;
-    }
-
-    .no-scrollbar {
-      -ms-overflow-style: none;
-      /* IE and Edge */
-      scrollbar-width: none;
-      /* Firefox */
-    }
-
-    @keyframes shimmer {
+    /* Dark shimmer for skeletons */
+    @keyframes shimmer-dark {
       0% {
         background-position: -1000px 0;
       }
@@ -103,9 +158,90 @@
     }
 
     .animate-shimmer {
-      animation: shimmer 2s infinite linear;
-      background: linear-gradient(to right, #1e293b 4%, #334155 25%, #1e293b 36%);
+      animation: shimmer-dark 2s infinite linear;
+      background: linear-gradient(to right, rgba(255, 255, 255, 0.04) 4%, rgba(255, 255, 255, 0.09) 25%, rgba(255, 255, 255, 0.04) 36%);
       background-size: 1000px 100%;
+    }
+
+    /* 3D card tilt */
+    .card-3d {
+      transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease;
+    }
+
+    .card-3d:hover {
+      transform: perspective(800px) rotateY(1.5deg) rotateX(1deg) scale(1.01);
+      box-shadow: 0 32px 80px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(182, 19, 236, 0.15);
+    }
+
+    /* Input style for dark theme */
+    .dark-input {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text-primary);
+      border-radius: 12px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .dark-input:focus {
+      outline: none;
+      border-color: rgba(182, 19, 236, 0.5);
+      box-shadow: 0 0 0 3px rgba(182, 19, 236, 0.15);
+    }
+
+    .dark-input::placeholder {
+      color: rgba(244, 244, 248, 0.25);
+    }
+
+    /* No scrollbar */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    /* Custom scrollbar (subtle) */
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 99px;
+    }
+
+    /* Glow text */
+    .text-gradient-primary {
+      background: linear-gradient(135deg, #ffffff 0%, rgba(244, 244, 248, 0.7) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .text-primary-color {
+      color: var(--primary);
+    }
+
+    /* Ambient blob */
+    .blob {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(100px);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Select dark style */
+    select option {
+      background-color: #1a0a2e;
+      color: #F4F4F8;
     }
   </style>
 </head>
