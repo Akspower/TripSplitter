@@ -58,6 +58,29 @@ export default function App() {
     };
   }, []);
 
+  // Fix: black screen after screen lock in PWA mode
+  // When the device screen turns off and the user returns, the WebView sometimes blanks.
+  // Re-hydrate from localStorage cache on visibilitychange.
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        const savedTripId = localStorage.getItem('tripId');
+        const cachedJson = localStorage.getItem('cachedTrip');
+        if (savedTripId && cachedJson && !currentTrip) {
+          try {
+            const cached = JSON.parse(cachedJson);
+            setCurrentTrip(cached);
+          } catch (_) { /* ignore */ }
+        }
+        // Force a repaint — fixes iOS WebKit blank white/black flash
+        document.body.style.opacity = '0.99';
+        requestAnimationFrame(() => { document.body.style.opacity = ''; });
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [currentTrip]);
+
   useEffect(() => {
     const savedTripId = localStorage.getItem('tripId');
     const savedMyId = localStorage.getItem('myId');
@@ -218,6 +241,24 @@ export default function App() {
   if (currentTrip) {
     return (
       <div className="min-h-[100dvh] bg-[#0A0A0F] font-['Space_Grotesk',sans-serif]">
+        {/* Toaster must live here too — expense add/delete toasts */}
+        <Toaster
+          position="top-center"
+          toastOptions={{
+            style: {
+              background: 'rgba(13, 8, 23, 0.97)',
+              color: '#F4F4F8',
+              border: '1px solid rgba(182,19,236,0.3)',
+              fontFamily: 'Space Grotesk, sans-serif',
+              fontWeight: 600,
+              borderRadius: '16px',
+              backdropFilter: 'blur(12px)',
+              fontSize: '13px',
+            },
+            duration: 3000
+          }}
+          containerStyle={{ zIndex: 9999 }}
+        />
         <ConfirmDialog
           isOpen={confirmModal.isOpen}
           title={confirmModal.title}

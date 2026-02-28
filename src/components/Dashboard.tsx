@@ -492,21 +492,26 @@ const Dashboard: React.FC<{
                                                                 </button>
                                                             )}
                                                             {isToMe && (
-                                                                <button
-                                                                    onClick={() => {
-                                                                        const msg = `👋 Hey ${fromMember?.name}! Just a reminder — you owe ${formatINR(d.amount)} for "${trip.name}". Tap to view: ${window.location.origin}/?join=${trip.id}`;
-                                                                        if (navigator.share) {
-                                                                            navigator.share({ title: 'Payment Reminder', text: msg }).catch(() => { });
-                                                                        } else {
-                                                                            navigator.clipboard.writeText(msg).catch(() => { });
-                                                                            toast.success('Reminder copied — send it to them!', { icon: '📋' });
-                                                                        }
-                                                                    }}
-                                                                    className="w-full py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-bold uppercase tracking-wider hover:bg-emerald-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-                                                                >
-                                                                    <span className="material-symbols-outlined text-sm">content_copy</span>
-                                                                    Copy Reminder Message
-                                                                </button>
+                                                                <div className="flex items-center gap-2">
+                                                                    <p className="text-xs text-[rgba(244,244,248,0.35)] flex-1">
+                                                                        {fromMember?.name} hasn't paid yet
+                                                                    </p>
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            const msg = `👋 Hey ${fromMember?.name}! Reminder — you owe ${formatINR(d.amount)} for "${trip.name}". View here: ${window.location.origin}/?join=${trip.id}`;
+                                                                            if (navigator.share) {
+                                                                                navigator.share({ title: 'Payment Reminder', text: msg }).catch(() => { });
+                                                                            } else {
+                                                                                navigator.clipboard.writeText(msg).catch(() => { });
+                                                                                toast.success('Reminder copied!', { icon: '📋' });
+                                                                            }
+                                                                        }}
+                                                                        className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-bold active:scale-[0.97] transition-all touch-manipulation"
+                                                                    >
+                                                                        <span className="material-symbols-outlined text-sm">share</span>
+                                                                        Remind
+                                                                    </button>
+                                                                </div>
                                                             )}
                                                         </div>
                                                     </motion.div>

@@ -111,7 +111,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ trip, myId, onExportPDF }) => {
                     <span className="material-symbols-outlined text-[80px] text-[#b613ec]">analytics</span>
                 </div>
                 <div className="flex items-center gap-2 mb-3">
-                    <span className="material-symbols-outlined text-[#b613ec] text-sm">colors_spark</span>
+                    <span className="text-lg">✨</span>
                     <span className="text-[10px] font-bold uppercase tracking-widest text-[#b613ec]/80">Smart Summary</span>
                 </div>
                 <h2 className="text-2xl font-bold leading-tight mb-2 text-[#F4F4F8]">
@@ -189,7 +189,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ trip, myId, onExportPDF }) => {
 
             {/* ── Group Dynamics ── */}
             <section>
-                <h3 className="text-base font-bold text-[#F4F4F8] mb-4 px-1">Group Dynamic</h3>
+                <h3 className="text-base font-bold text-[#F4F4F8] mb-4 px-1">Trip MVPs</h3>
                 <div className="grid grid-cols-2 gap-4">
                     {/* Biggest Spender */}
                     <div className="glass-card rounded-2xl p-5 border border-white/8 flex flex-col items-center text-center gap-3">
@@ -220,39 +220,38 @@ const Analytics: React.FC<AnalyticsProps> = ({ trip, myId, onExportPDF }) => {
             <section>
                 <div className="glass-card rounded-2xl p-5 border border-white/8">
                     <h3 className="text-base font-bold text-[#F4F4F8] mb-5 flex items-center gap-2">
-                        <span className="material-symbols-outlined text-amber-400">leaderboard</span>
+                        <span className="text-lg">📊</span>
                         Who Paid the Most
                     </h3>
                     <div className="space-y-4">
                         {memberData.map((member, index) => {
-                            const rankColors = ['text-amber-400', 'text-slate-300', 'text-amber-600'];
-                            const rankBg = ['bg-amber-400/10 border-amber-400/20', 'bg-slate-400/10 border-slate-400/20', 'bg-amber-700/10 border-amber-700/20'];
-                            const rankLabel = ['#1', '#2', '#3'];
-                            const hasRank = index < 3;
+                            // Medal emoji — renders natively on every mobile OS, no font dependency
+                            const medals = ['🥇', '🥈', '🥉'];
+                            const medal = index < 3 ? medals[index] : null;
                             return (
                                 <div key={member.id}>
                                     <div className="flex items-center justify-between mb-2">
                                         <div className="flex items-center gap-3">
                                             <div className="relative">
                                                 <InitialAvatar name={member.name} index={member.index} size="w-9 h-9" />
-                                                {hasRank && (
-                                                    <span className={`absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center border ${rankBg[index]} ${rankColors[index]}`}>
-                                                        {index + 1}
-                                                    </span>
+                                                {medal && (
+                                                    <span className="absolute -top-2 -right-2 text-base leading-none select-none">{medal}</span>
                                                 )}
                                             </div>
-                                            <p className={`text-sm font-bold ${member.id === myId ? 'text-[#b613ec]' : 'text-[#F4F4F8]'}`}>
+                                            <p className={`text-sm font-bold leading-tight ${member.id === myId ? 'text-[#b613ec]' : 'text-[#F4F4F8]'}`}>
                                                 {member.name}{member.id === myId ? ' (You)' : ''}
                                             </p>
                                         </div>
-                                        <div className="text-right">
-                                            <span className="font-bold text-[#F4F4F8] text-sm">{formatINR(member.value)}</span>
-                                            {hasRank && <span className={`ml-2 text-[10px] font-bold ${rankColors[index]}`}>{rankLabel[index]}</span>}
-                                        </div>
+                                        <span className="font-bold text-[#F4F4F8] text-sm shrink-0 ml-2">{formatINR(member.value)}</span>
                                     </div>
                                     <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
                                         <div
-                                            className={`h-full rounded-full ${index === 0 ? 'bg-gradient-to-r from-amber-400 to-amber-500' : index === 1 ? 'bg-gradient-to-r from-slate-400 to-slate-500' : index === 2 ? 'bg-gradient-to-r from-amber-700 to-amber-800' : `bg-gradient-to-r ${member.id === myId ? 'from-violet-500 to-[#b613ec]' : MEMBER_GRADIENTS[index % MEMBER_GRADIENTS.length]}`}`}
+                                            className={`h-full rounded-full ${index === 0 ? 'bg-gradient-to-r from-amber-400 to-yellow-300'
+                                                    : index === 1 ? 'bg-gradient-to-r from-slate-300 to-slate-400'
+                                                        : index === 2 ? 'bg-gradient-to-r from-amber-700 to-amber-600'
+                                                            : member.id === myId ? 'bg-gradient-to-r from-violet-500 to-[#b613ec]'
+                                                                : `bg-gradient-to-r ${MEMBER_GRADIENTS[index % MEMBER_GRADIENTS.length]}`
+                                                }`}
                                             style={{ width: `${(member.value / (memberData[0]?.value || 1)) * 100}%`, transition: 'width 1s ease' }}
                                         />
                                     </div>
