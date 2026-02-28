@@ -458,10 +458,10 @@ export default function App() {
                 transition={{ delay: 0.2, duration: 0.4 }}
               >
                 <h1 className="text-5xl font-bold leading-[0.95] tracking-tighter text-[#F4F4F8]">
-                  SplitWay
+                  Trip<span className="text-[#b613ec]">Khata</span>
                 </h1>
                 <p className="text-lg text-[rgba(244,244,248,0.5)] font-light max-w-[280px]">
-                  Real-time splits. AI suggestions. Zero drama.
+                  Add bills. See who owes what. Settle at the end.
                 </p>
               </motion.div>
 
@@ -553,8 +553,8 @@ export default function App() {
       </div>
 
       {/* Footer */}
-      <div className="p-5 text-center text-[rgba(244,244,248,0.2)] font-bold text-[10px] uppercase tracking-[0.2em] relative z-10">
-        Secure • Realtime • Intelligent
+      <div className="pb-6 pt-2 text-center relative z-10">
+        <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-[rgba(244,244,248,0.15)]">TripKhata · Made for India 🇮🇳</p>
       </div>
     </div>
   );

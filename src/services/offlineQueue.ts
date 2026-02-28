@@ -5,7 +5,7 @@ export interface OfflineAction {
     timestamp: number;
 }
 
-const STORAGE_KEY = 'splitway_offline_queue';
+const STORAGE_KEY = 'tripkhata_offline_queue';
 
 export const OfflineQueue = {
     saveAction: (type: OfflineAction['type'], payload: any) => {

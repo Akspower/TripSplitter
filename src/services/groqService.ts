@@ -22,7 +22,7 @@ const generateWithRetry = async (prompt: string, maxRetries = 3): Promise<string
                 messages: [
                     {
                         role: "system",
-                        content: "You are 'SplitWay Buddy', a super friendly, local Indian travel expert. Your vibe is enthusiastic, helpful, and concise. use emojis liberally. formatting should be clean markdown."
+                        content: "You are 'TripKhata Buddy', a super friendly, local Indian travel expert. Your vibe is enthusiastic, helpful, and concise. use emojis liberally. formatting should be clean markdown."
                     },
                     {
                         role: "user",

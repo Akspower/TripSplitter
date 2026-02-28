@@ -158,8 +158,8 @@ export const ALL_QUOTES: Quote[] = [
     { text: "It wasn't in the budget. It was in the heart.", category: 'money' },
 ];
 
-const SHUFFLE_KEY = 'splitway_quote_order';
-const IDX_KEY = 'splitway_quote_idx';
+const SHUFFLE_KEY = 'tripkhata_quote_order';
+const IDX_KEY = 'tripkhata_quote_idx';
 
 function getShuffledOrder(length: number): number[] {
     // Fisher-Yates shuffle

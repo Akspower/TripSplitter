@@ -67,11 +67,9 @@ const Header: React.FC<HeaderProps> = ({ tripName, destination, startDate, endDa
             <header className="sticky top-0 z-50 glass-header px-4 md:px-6 py-3 flex justify-between items-center">
                 {/* Left: Logo + Sync Status */}
                 <div className="flex items-center gap-2.5 overflow-hidden">
-                    <div className="bg-[#b613ec] p-1.5 rounded-xl flex items-center justify-center shadow-lg shadow-[#b613ec]/30 shrink-0">
-                        <span className="material-symbols-outlined text-white text-xl">account_balance_wallet</span>
-                    </div>
+                    <img src="/icon-192.png" alt="TripKhata" className="w-8 h-8 rounded-xl shadow-md shadow-[#b613ec]/25 shrink-0" />
                     <div className="min-w-0">
-                        <h1 className="text-base font-bold text-[#F4F4F8] tracking-tight truncate">SplitWay</h1>
+                        <h1 className="text-base font-bold text-[#F4F4F8] tracking-tight truncate">Trip<span className="text-[#b613ec]">Khata</span></h1>
                         <div className="flex items-center gap-1.5">
                             <div className={`w-1.5 h-1.5 rounded-full sync-dot ${syncColor}`} />
                             <span className="text-[9px] font-bold uppercase tracking-widest text-[rgba(244,244,248,0.4)]">{syncLabel}</span>
@@ -113,7 +111,7 @@ const Header: React.FC<HeaderProps> = ({ tripName, destination, startDate, endDa
                         <button
                             onClick={() => {
                                 const shareUrl = `${window.location.origin}/?join=${tripId}`;
-                                const shareData = { title: 'Join my trip on SplitWay', text: `Join my trip on SplitWay! Room: ${tripId}`, url: shareUrl };
+                                const shareData = { title: 'Join my trip on TripKhata', text: `Join my trip on TripKhata! Room ID: ${tripId}`, url: shareUrl };
                                 if (navigator.share) {
                                     navigator.share(shareData).catch(console.error);
                                 } else {
