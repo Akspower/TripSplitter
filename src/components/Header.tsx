@@ -64,7 +64,7 @@ const Header: React.FC<HeaderProps> = ({ tripName, destination, startDate, endDa
             )}
 
             {/* Main Header */}
-            <header className="sticky top-0 z-50 glass-header px-4 md:px-6 py-3 flex justify-between items-center">
+            <header className="sticky top-0 z-50 glass-header px-4 md:px-6 pt-[calc(0.75rem+env(safe-area-inset-top,0px))] pb-3 flex justify-between items-center">
                 {/* Left: Logo + Sync Status */}
                 <div className="flex items-center gap-2.5 overflow-hidden">
                     <img src="/icon-192.png" alt="TripKhata" className="w-8 h-8 rounded-xl shadow-md shadow-[#b613ec]/25 shrink-0" />

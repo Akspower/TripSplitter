@@ -22,7 +22,7 @@ const TravelBackground: React.FC = () => {
     }, []);
 
     return (
-        <div className="fixed inset-0 overflow-hidden pointer-events-none z-0" aria-hidden="true">
+        <div className="fixed inset-0 overflow-hidden pointer-events-none z-0 will-change-transform" aria-hidden="true">
 
             {/* ── Layer 1: Deep aurora blobs — vivid, slow drift ── */}
             <div ref={auroraRef} className="absolute inset-0 will-change-transform"

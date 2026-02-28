@@ -179,7 +179,7 @@ const Dashboard: React.FC<{
     const animatedBalance = useCountUp(Math.abs(myBalance), [myBalance]);
 
     return (
-        <div className="pb-44 px-4 md:px-6 pt-6 max-w-7xl mx-auto w-full">
+        <div className="pb-[calc(11rem+env(safe-area-inset-bottom,0px))] px-4 md:px-6 pt-6 max-w-7xl mx-auto w-full">
             <ConfirmDialog isOpen={confirmModal.isOpen} title={confirmModal.title} message={confirmModal.message}
                 isDestructive={confirmModal.isDestructive} onConfirm={confirmModal.onConfirm}
                 onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))} />
@@ -829,7 +829,7 @@ const Dashboard: React.FC<{
             </div>
 
             {/* ── Floating Bottom Dock ───────────────────── */}
-            <div className="fixed bottom-6 left-1/2 floating-dock w-[92%] max-w-lg z-40">
+            <div className="fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom,0px))] left-1/2 floating-dock w-[92%] max-w-lg z-40">
                 <div className="glass-card px-4 py-2.5 rounded-full border border-white/10 shadow-2xl shadow-black/50 flex items-center justify-between ring-1 ring-white/5">
                     <div className="flex items-center gap-3 ml-1">
                         <div className="flex -space-x-2">
