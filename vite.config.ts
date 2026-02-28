@@ -10,22 +10,30 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'],
       manifest: {
-        name: 'SplitWay - Trip Expense Splitter',
+        name: 'SplitWay — Trip Expense Splitter',
         short_name: 'SplitWay',
-        description: 'Smart expense splitting for India trips with AI-powered insights',
-        theme_color: '#4F46E5',
-        background_color: '#f8fafc',
+        description: 'Smart expense splitting for group India trips',
+        theme_color: '#0A0A0F',
+        background_color: '#0A0A0F',
         display: 'standalone',
+        orientation: 'portrait',
+        start_url: '/',
         icons: [
           {
             src: 'icon-192.png',
             sizes: '192x192',
-            type: 'image/png'
+            type: 'image/png',
           },
           {
             src: 'icon-512.png',
             sizes: '512x512',
-            type: 'image/png'
+            type: 'image/png',
+          },
+          {
+            src: 'icon-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
           }
         ]
       },

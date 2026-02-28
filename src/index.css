@@ -272,3 +272,81 @@
     background-size: 600px 100%;
     animation: shimmer-violet 4s ease-in-out infinite;
 }
+
+/* ── TravelBackground animations ─────────────────────────────────────── */
+
+@keyframes auroraFloat1 {
+
+    0%,
+    100% {
+        transform: translate(0, 0) scale(1);
+    }
+
+    33% {
+        transform: translate(30px, -20px) scale(1.05);
+    }
+
+    66% {
+        transform: translate(-20px, 15px) scale(0.97);
+    }
+}
+
+@keyframes auroraFloat2 {
+
+    0%,
+    100% {
+        transform: translate(0, 0) scale(1);
+    }
+
+    40% {
+        transform: translate(-25px, 20px) scale(1.04);
+    }
+
+    70% {
+        transform: translate(20px, -15px) scale(0.98);
+    }
+}
+
+@keyframes auroraFloat3 {
+
+    0%,
+    100% {
+        transform: translate(0, 0) scale(1);
+    }
+
+    30% {
+        transform: translate(15px, -25px) scale(1.03);
+    }
+
+    60% {
+        transform: translate(-10px, 10px) scale(0.96);
+    }
+}
+
+@keyframes iconFloat {
+
+    0%,
+    100% {
+        transform: translateY(0) rotate(-3deg);
+        opacity: 0.12;
+    }
+
+    50% {
+        transform: translateY(-14px) rotate(3deg);
+        opacity: 0.18;
+    }
+}
+
+@keyframes starTwinkle {
+
+    0%,
+    100% {
+        opacity: var(--star-opacity, 0.2);
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: calc(var(--star-opacity, 0.2) * 2.5);
+        transform: scale(1.4);
+    }
+}

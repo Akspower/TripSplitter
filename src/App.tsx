@@ -9,6 +9,7 @@ import Header from './components/Header';
 import ConfirmDialog from './components/ui/ConfirmDialog';
 import Skeleton from './components/ui/Skeleton';
 import QuoteBar from './components/QuoteBar';
+import TravelBackground from './components/TravelBackground';
 
 // Lazy Load Heavy Components
 const Dashboard = lazy(() => import('./components/Dashboard'));
@@ -333,18 +334,13 @@ export default function App() {
         containerStyle={{ zIndex: 9999 }}
       />
 
-      {/* Ambient Background Blobs */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        <div className="blob w-[60%] h-[45%] top-[-10%] left-[-10%] bg-[#b613ec]/20" />
-        <div className="blob w-[50%] h-[50%] bottom-[5%] right-[-10%] bg-indigo-600/10" />
-      </div>
+      {/* Travel-themed animated background — mountains, aurora, stars, travel icons */}
+      <TravelBackground />
 
       {/* Header */}
       <header className="relative z-10 flex items-center justify-between p-5 pb-0">
         <div className="flex items-center gap-2.5">
-          <div className="bg-[#b613ec] p-2 rounded-xl flex items-center justify-center shadow-lg shadow-[#b613ec]/30">
-            <span className="material-symbols-outlined text-white text-xl">account_balance_wallet</span>
-          </div>
+          <img src="/icon-192.png" alt="Splitway" className="w-9 h-9 rounded-xl shadow-lg shadow-[#b613ec]/30" />
           <h2 className="text-xl font-bold tracking-tight text-[#F4F4F8]">SplitWay</h2>
         </div>
       </header>
