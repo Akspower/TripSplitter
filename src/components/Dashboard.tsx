@@ -9,6 +9,7 @@ import toast from 'react-hot-toast';
 import ConfirmDialog from './ui/ConfirmDialog';
 import { vibrate, HapticPatterns } from '../utils/haptics';
 import { motion, AnimatePresence } from 'framer-motion';
+import QuoteBar from './QuoteBar';
 
 const TABS = [
     { id: 'expenses', label: 'Expenses', icon: 'receipt_long' },
@@ -19,6 +20,25 @@ const TABS = [
 ] as const;
 
 type TabId = typeof TABS[number]['id'];
+
+// Simple count-up hook — animates from 0 to target over ~600ms, no library needed
+function useCountUp(target: number, deps: unknown[] = []): number {
+    const [val, setVal] = useState(0);
+    useEffect(() => {
+        let start = 0;
+        const duration = 600;
+        const step = 16;
+        const increment = target / (duration / step);
+        const timer = setInterval(() => {
+            start += increment;
+            if (start >= target) { setVal(target); clearInterval(timer); }
+            else setVal(Math.round(start));
+        }, step);
+        return () => clearInterval(timer);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [target, ...deps]);
+    return val;
+}
 
 const CATEGORY_EMOJI: Record<string, string> = {
     Food: '🍛', Drink: '🥤', Alcohol: '🍺', 'Cab/Taxi': '🚕',
@@ -152,6 +172,9 @@ const Dashboard: React.FC<{
         return Math.round((paidCount / iOwe.length) * 100);
     }, [iOwe, theyOweMe, myDebtKeys, paidDebtKeys]);
 
+    // Count-up animation for balance number
+    const animatedBalance = useCountUp(Math.abs(myBalance), [myBalance]);
+
     return (
         <div className="pb-44 px-4 md:px-6 pt-6 max-w-7xl mx-auto w-full">
             <ConfirmDialog isOpen={confirmModal.isOpen} title={confirmModal.title} message={confirmModal.message}
@@ -173,8 +196,8 @@ const Dashboard: React.FC<{
                         <div className="flex justify-between items-start mb-4 relative z-10">
                             <div>
                                 <p className="text-[rgba(244,244,248,0.45)] text-sm font-medium mb-1">My Net Standing</p>
-                                <h2 className={`text-4xl font-bold tracking-tight ${myBalance >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                                    {myBalance >= 0 ? '+' : ''}{formatINR(myBalance)}
+                                <h2 className={`text-4xl font-bold tracking-tight tabular-nums ${myBalance >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                    {myBalance >= 0 ? '+' : '-'}{formatINR(animatedBalance)}
                                 </h2>
                                 <div className="flex items-center gap-2 mt-1.5">
                                     <div className={`w-1.5 h-1.5 rounded-full ${myBalance >= 0 ? 'bg-emerald-400' : 'bg-rose-400'}`} />
@@ -232,12 +255,47 @@ const Dashboard: React.FC<{
 
                 {/* ── Right: Tabs + Content ──────────────── */}
                 <div className="lg:col-span-7 w-full">
+                    {/* ── Trip Progress Strip ──────────────────────── */}
+                    {(() => {
+                        const now = new Date();
+                        const start = new Date(trip.startDate);
+                        const end = new Date(trip.endDate);
+                        const totalDays = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / 86400000));
+                        const elapsed = Math.max(0, Math.min(totalDays, Math.ceil((now.getTime() - start.getTime()) / 86400000)));
+                        const pct = Math.round((elapsed / totalDays) * 100);
+                        const daysLeft = Math.max(0, totalDays - elapsed);
+                        const tripEnded = now > end;
+                        return (
+                            <div className="glass-card rounded-2xl px-4 py-3 border border-white/8 mb-4">
+                                <div className="flex items-center justify-between mb-2">
+                                    <span className="text-[10px] font-bold uppercase tracking-widest text-[rgba(244,244,248,0.35)]">
+                                        {tripEnded ? 'Trip Ended' : daysLeft === 0 ? 'Last Day!' : `${daysLeft} day${daysLeft > 1 ? 's' : ''} left`}
+                                    </span>
+                                    <span className="text-[10px] font-bold text-[rgba(244,244,248,0.35)]">
+                                        Day {Math.min(elapsed + 1, totalDays)} of {totalDays}
+                                    </span>
+                                </div>
+                                <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                                    <div
+                                        className={`h-full rounded-full transition-all duration-700 ${tripEnded ? 'bg-emerald-400' : 'bg-gradient-to-r from-[#b613ec] to-indigo-500'}`}
+                                        style={{ width: `${pct}%` }}
+                                    />
+                                </div>
+                                <div className="flex justify-between mt-1.5">
+                                    <span className="text-[9px] text-[rgba(244,244,248,0.2)]">{start.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
+                                    <span className="text-[9px] text-[rgba(244,244,248,0.2)]">{end.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
+                                </div>
+                            </div>
+                        );
+                    })()}
+
+                    {/* ── Tab Buttons ─────────────────────────────── */}
                     <div className="flex gap-2 overflow-x-auto no-scrollbar py-2 mb-6">
                         {TABS.map(tab => (
                             <motion.button
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
-                                className={`flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 ${activeTab === tab.id
+                                className={`flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 relative ${activeTab === tab.id
                                     ? 'bg-[#b613ec] text-white shadow-lg shadow-[#b613ec]/30'
                                     : 'glass-card text-[rgba(244,244,248,0.45)] hover:text-[#F4F4F8]'
                                     }`}
@@ -245,6 +303,10 @@ const Dashboard: React.FC<{
                             >
                                 <span className="material-symbols-outlined text-sm">{tab.icon}</span>
                                 {tab.label}
+                                {/* Settlement badge — shows when user has pending debts */}
+                                {tab.id === 'summary' && iOwe.length > 0 && activeTab !== 'summary' && (
+                                    <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-[#0A0A0F]" />
+                                )}
                             </motion.button>
                         ))}
                     </div>
@@ -269,14 +331,31 @@ const Dashboard: React.FC<{
                                         </div>
                                     )}
                                     {filteredExpenses.length === 0 ? (
-                                        <div className="text-center py-24 glass-card rounded-3xl border-2 border-dashed border-white/10">
-                                            <div className="glass-pill w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                                                <span className="material-symbols-outlined text-[rgba(244,244,248,0.25)] text-3xl">receipt_long</span>
+                                        <div className="glass-card rounded-3xl border-2 border-dashed border-white/10 overflow-hidden">
+                                            <div className="p-10 flex flex-col items-center text-center">
+                                                {/* Floating emoji illustration */}
+                                                <div className="text-6xl mb-4 animate-float-emoji select-none">🌴</div>
+                                                <p className="text-[#F4F4F8] font-bold text-lg mb-1">
+                                                    {optimisticTrip.expenses.length === 0 ? 'No bills logged yet!' : 'No results found'}
+                                                </p>
+                                                <p className="text-[rgba(244,244,248,0.35)] text-sm mb-6">
+                                                    {optimisticTrip.expenses.length === 0
+                                                        ? "The trip is live but the wallet hasn't been touched yet."
+                                                        : 'Try a different search term.'}
+                                                </p>
+                                                {optimisticTrip.expenses.length === 0 && (
+                                                    <>
+                                                        <button
+                                                            onClick={onAddExpense}
+                                                            className="btn-primary px-6 py-3 rounded-full font-bold text-sm flex items-center gap-2 mb-5"
+                                                        >
+                                                            <span className="material-symbols-outlined text-sm">add_circle</span>
+                                                            Log First Bill
+                                                        </button>
+                                                        <QuoteBar category="travel" compact interval={12000} className="w-full" />
+                                                    </>
+                                                )}
                                             </div>
-                                            <p className="text-[rgba(244,244,248,0.4)] font-bold text-base">Your expense feed is empty.</p>
-                                            <button onClick={onAddExpense} className="text-[#b613ec] font-bold mt-3 text-sm uppercase tracking-widest hover:opacity-70 transition-opacity">
-                                                Add First Bill
-                                            </button>
                                         </div>
                                     ) : (
                                         filteredExpenses.map((e, idx) => {
@@ -378,12 +457,11 @@ const Dashboard: React.FC<{
                                     {/* ── Debt cards ── */}
                                     <div className="space-y-3">
                                         {debts.length === 0 ? (
-                                            <div className="text-center py-16 glass-card rounded-3xl border-2 border-dashed border-white/10">
-                                                <div className="w-20 h-20 bg-emerald-400/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-400/20">
-                                                    <span className="material-symbols-outlined text-emerald-400 text-4xl">balance</span>
-                                                </div>
-                                                <p className="text-[rgba(244,244,248,0.5)] font-bold text-lg">Perfectly Balanced! 🎉</p>
-                                                <p className="text-[rgba(244,244,248,0.25)] text-sm mt-1">No payments needed — everyone's square.</p>
+                                            <div className="text-center py-12 glass-card rounded-3xl border border-emerald-500/15 overflow-hidden">
+                                                <div className="text-5xl mb-4 animate-float-emoji select-none">🎉</div>
+                                                <p className="text-[rgba(244,244,248,0.7)] font-bold text-lg mb-1">Perfectly Balanced!</p>
+                                                <p className="text-[rgba(244,244,248,0.3)] text-sm mb-5">No payments needed — everyone's square.</p>
+                                                <QuoteBar category="settled" compact interval={10000} className="mx-4" />
                                             </div>
                                         ) : (
                                             debts.map((d, idx) => {

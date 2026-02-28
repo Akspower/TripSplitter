@@ -192,3 +192,83 @@
         transform: translateY(0);
     }
 }
+
+/* New: ambient glow drift for landing preview card */
+@keyframes ambient-drift {
+
+    0%,
+    100% {
+        transform: translate(0, 0) scale(1);
+        opacity: 0.15;
+    }
+
+    33% {
+        transform: translate(8px, -6px) scale(1.05);
+        opacity: 0.25;
+    }
+
+    66% {
+        transform: translate(-6px, 4px) scale(0.97);
+        opacity: 0.18;
+    }
+}
+
+/* New: subtle float for emoji illustrations in empty states */
+@keyframes float-emoji {
+
+    0%,
+    100% {
+        transform: translateY(0) rotate(-2deg);
+    }
+
+    50% {
+        transform: translateY(-8px) rotate(2deg);
+    }
+}
+
+/* New: count up number reveal — pairs with JS that toggles this class */
+@keyframes count-reveal {
+    from {
+        opacity: 0;
+        transform: translateY(6px) scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* New: violet shimmer that sweeps across cards */
+@keyframes shimmer-violet {
+    0% {
+        background-position: -600px 0;
+    }
+
+    100% {
+        background-position: 600px 0;
+    }
+}
+
+.animate-ambient-drift {
+    animation: ambient-drift 8s ease-in-out infinite;
+}
+
+.animate-float-emoji {
+    animation: float-emoji 3s ease-in-out infinite;
+}
+
+.animate-count-reveal {
+    animation: count-reveal 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.shimmer-violet-sweep {
+    background: linear-gradient(90deg,
+            transparent 0%,
+            rgba(182, 19, 236, 0.06) 40%,
+            rgba(182, 19, 236, 0.12) 50%,
+            rgba(182, 19, 236, 0.06) 60%,
+            transparent 100%);
+    background-size: 600px 100%;
+    animation: shimmer-violet 4s ease-in-out infinite;
+}

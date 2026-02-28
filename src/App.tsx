@@ -8,6 +8,7 @@ import { PDFService } from './services/pdfService';
 import Header from './components/Header';
 import ConfirmDialog from './components/ui/ConfirmDialog';
 import Skeleton from './components/ui/Skeleton';
+import QuoteBar from './components/QuoteBar';
 
 // Lazy Load Heavy Components
 const Dashboard = lazy(() => import('./components/Dashboard'));
@@ -443,6 +444,15 @@ export default function App() {
                 </div>
               </motion.div>
 
+              {/* Rotating sarcastic travel quote */}
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15, duration: 0.4 }}
+                className="mb-5"
+              >
+                <QuoteBar category="travel" interval={9000} />
+              </motion.div>
 
               {/* Hero Text */}
               <motion.div
@@ -475,6 +485,7 @@ export default function App() {
                   <span className="material-symbols-outlined text-xl">add_circle</span>
                   Plan New Trip
                 </motion.button>
+                <p className="text-center text-[10px] text-[rgba(244,244,248,0.25)] font-medium tracking-wide -mt-1">You'll get a Room ID — share with your squad</p>
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.97 }}
@@ -484,6 +495,7 @@ export default function App() {
                   <span className="material-symbols-outlined text-xl mr-2 text-[rgba(244,244,248,0.5)]">group_add</span>
                   Join Existing
                 </motion.button>
+                <p className="text-center text-[10px] text-[rgba(244,244,248,0.25)] font-medium tracking-wide -mt-1">Enter the 6-digit Room ID from your friend</p>
               </motion.div>
 
               {/* Feature Pills */}
