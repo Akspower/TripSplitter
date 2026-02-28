@@ -350,3 +350,32 @@
         transform: scale(1.4);
     }
 }
+
+/* Universal travel emoji rain */
+@keyframes particleFall {
+    0% {
+        transform: translateY(-8vh) translateX(0px);
+        opacity: 0;
+    }
+
+    5% {
+        opacity: 1;
+    }
+
+    30% {
+        transform: translateY(30vh) translateX(18px);
+    }
+
+    60% {
+        transform: translateY(65vh) translateX(-12px);
+    }
+
+    90% {
+        opacity: 0.9;
+    }
+
+    100% {
+        transform: translateY(108vh) translateX(6px);
+        opacity: 0;
+    }
+}
