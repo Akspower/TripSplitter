@@ -205,7 +205,7 @@ export default function App() {
     if (!currentTrip) return;
     const previousExpenses = currentTrip.expenses;
     setCurrentTrip(prev => prev ? { ...prev, expenses: prev.expenses.filter(e => e.id !== expenseId) } : null);
-    const success = await TripService.deleteExpense(expenseId);
+    const success = await TripService.deleteExpense(expenseId, currentTrip.id);
     if (!success) {
       setCurrentTrip(prev => prev ? { ...prev, expenses: previousExpenses } : null);
       toast.error('Failed to delete expense. Please try again.');

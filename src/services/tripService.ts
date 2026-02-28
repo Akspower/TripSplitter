@@ -1,317 +1,324 @@
-import { supabase } from './supabaseClient';
+import {
+    doc, setDoc, getDoc, collection, getDocs,
+    deleteDoc, onSnapshot, serverTimestamp, writeBatch,
+    updateDoc
+} from 'firebase/firestore';
+import { db } from './firebaseClient';
 import type { Trip, Member, Expense } from '../types';
 import { OfflineQueue } from './offlineQueue';
 
-// Map database rows to our app types
-const mapTripFromDb = (tripData: any, members: any[], expenses: any[]): Trip => ({
-    id: tripData.id,
-    name: tripData.name,
-    destination: tripData.destination,
-    startDate: tripData.start_date,
-    endDate: tripData.end_date,
-    creatorId: tripData.creator_id,
-    adminPin: tripData.admin_pin,
-    tripStyle: tripData.trip_style,
-    budgetType: tripData.budget_type,
-    ageGroup: tripData.age_group,
-    members: members.map((m, idx) => ({
-        id: m.user_id,
-        name: m.name,
-        isCreator: m.is_creator,
-        avatarColor: m.avatar_color || `color-${idx}`
-    })),
-    expenses: expenses.map(e => ({
-        id: e.id,
-        description: e.description,
-        amount: parseFloat(e.amount),
-        date: e.date,
-        category: e.category,
-        payerId: e.payer_id,
-        participantIds: e.participant_ids,
-        createdBy: e.created_by,
-        splitType: e.split_type,
-        splitDetails: e.split_details
-    }))
+// ─── Helpers ───────────────────────────────────────────────────────────────
+
+const mapExpenseFromDoc = (id: string, data: Record<string, any>): Expense => ({
+    id,
+    description: data.description,
+    amount: Number(data.amount),
+    date: data.date?.toDate?.()?.toISOString?.() ?? data.date ?? new Date().toISOString(),
+    category: data.category,
+    payerId: data.payerId,
+    participantIds: data.participantIds ?? [],
+    createdBy: data.createdBy,
+    splitType: data.splitType ?? 'EQUAL',
+    splitDetails: data.splitDetails ?? {},
 });
 
+const mapMemberFromDoc = (id: string, data: Record<string, any>, idx: number): Member => ({
+    id,
+    name: data.name,
+    isCreator: data.isCreator ?? false,
+    avatarColor: data.avatarColor ?? `color-${idx}`,
+});
+
+// ─── TripService ────────────────────────────────────────────────────────────
+
 export const TripService = {
-    async createTrip(trip: Trip): Promise<{ success: boolean, error?: string }> {
-        const { error: tripError } = await supabase
-            .from('trips')
-            .insert({
-                id: trip.id,
+
+    /**
+     * Create a new trip with all its members in Firestore.
+     * Uses a batch write so it's atomic — either everything succeeds or nothing does.
+     */
+    async createTrip(trip: Trip): Promise<{ success: boolean; error?: string }> {
+        try {
+            const batch = writeBatch(db);
+
+            // Trip document
+            const tripRef = doc(db, 'trips', trip.id);
+            batch.set(tripRef, {
                 name: trip.name,
                 destination: trip.destination,
-                start_date: trip.startDate,
-                end_date: trip.endDate,
-                creator_id: trip.creatorId,
-                admin_pin: trip.adminPin,
-                trip_style: trip.tripStyle,
-                budget_type: trip.budgetType,
-                age_group: trip.ageGroup
+                startDate: trip.startDate,
+                endDate: trip.endDate,
+                creatorId: trip.creatorId,
+                adminPin: trip.adminPin ?? null,
+                tripStyle: trip.tripStyle ?? 'adventure',
+                budgetType: trip.budgetType ?? 'moderate',
+                ageGroup: trip.ageGroup ?? 'mixed',
+                createdAt: serverTimestamp(),
             });
 
-        if (tripError) {
-            // console.error('Error creating trip:', tripError);
-            return { success: false, error: tripError.message };
+            // Members as sub-collection documents
+            for (const member of trip.members) {
+                const memberRef = doc(db, 'trips', trip.id, 'members', member.id);
+                batch.set(memberRef, {
+                    name: member.name,
+                    isCreator: member.isCreator,
+                    avatarColor: member.avatarColor ?? 'color-0',
+                });
+            }
+
+            await batch.commit();
+            return { success: true };
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : 'Unknown error';
+            return { success: false, error: msg };
         }
-
-        // Insert members with avatar colors
-        const membersToInsert = trip.members.map((m, idx) => ({
-            trip_id: trip.id,
-            user_id: m.id,
-            name: m.name,
-            is_creator: m.isCreator,
-            avatar_color: m.avatarColor || `color-${idx}`
-        }));
-
-        const { error: memberError } = await supabase.from('members').insert(membersToInsert);
-        if (memberError) {
-            // console.error('Error creating members:', memberError);
-            // Try to cleanup trip if member insert fails
-            await supabase.from('trips').delete().eq('id', trip.id);
-            return { success: false, error: memberError.message };
-        }
-
-        return { success: true };
     },
 
-    async joinTrip(tripId: string, member: Member): Promise<{ success: boolean, trip?: Trip }> {
-        // 1. Check if trip exists
-        const { data: tripData, error: tripError } = await supabase
-            .from('trips')
-            .select('*')
-            .eq('id', tripId)
-            .single();
+    /**
+     * Join an existing trip. Adds the new member to the members sub-collection.
+     */
+    async joinTrip(tripId: string, member: Member): Promise<{ success: boolean; trip?: Trip }> {
+        try {
+            const tripRef = doc(db, 'trips', tripId);
+            const tripSnap = await getDoc(tripRef);
+            if (!tripSnap.exists()) return { success: false };
 
-        if (tripError || !tripData) {
-            // console.error('Trip not found or error:', tripError);
-            return { success: false };
-        }
-
-        // 2. Add new member
-        const { error: memberError } = await supabase
-            .from('members')
-            .insert({
-                trip_id: tripId,
-                user_id: member.id,
+            // Add member
+            const memberRef = doc(db, 'trips', tripId, 'members', member.id);
+            await setDoc(memberRef, {
                 name: member.name,
-                is_creator: member.isCreator
+                isCreator: member.isCreator,
+                avatarColor: member.avatarColor ?? 'color-1',
             });
 
-        if (memberError) {
-            // console.error('Error adding member:', memberError);
+            return this.getTrip(tripId);
+        } catch {
             return { success: false };
         }
-
-        // 3. Fetch full trip details to return
-        return this.getTrip(tripId);
     },
 
-    async getTrip(tripId: string): Promise<{ success: boolean, trip?: Trip, error?: string }> {
-        const { data: tripData, error: tripError } = await supabase
-            .from('trips')
-            .select('*')
-            .eq('id', tripId)
-            .single();
+    /**
+     * Fetch a full trip (trip doc + members + expenses sub-collections).
+     */
+    async getTrip(tripId: string): Promise<{ success: boolean; trip?: Trip; error?: string }> {
+        try {
+            const tripRef = doc(db, 'trips', tripId);
+            const tripSnap = await getDoc(tripRef);
 
-        if (tripError) return { success: false, error: tripError.message };
-        if (!tripData) return { success: false, error: 'NOT_FOUND' };
+            if (!tripSnap.exists()) return { success: false, error: 'NOT_FOUND' };
+            const tripData = tripSnap.data();
 
-        const { data: members, error: memberError } = await supabase
-            .from('members')
-            .select('*')
-            .eq('trip_id', tripId);
+            // Members
+            const membersSnap = await getDocs(collection(db, 'trips', tripId, 'members'));
+            const members: Member[] = membersSnap.docs.map((d, idx) =>
+                mapMemberFromDoc(d.id, d.data(), idx)
+            );
 
-        if (memberError) return { success: false };
+            // Expenses
+            const expensesSnap = await getDocs(collection(db, 'trips', tripId, 'expenses'));
+            const expenses: Expense[] = expensesSnap.docs.map(d =>
+                mapExpenseFromDoc(d.id, d.data())
+            );
 
-        const { data: expenses, error: expenseError } = await supabase
-            .from('expenses')
-            .select('*')
-            .eq('trip_id', tripId);
+            const trip: Trip = {
+                id: tripId,
+                name: tripData.name,
+                destination: tripData.destination,
+                startDate: tripData.startDate,
+                endDate: tripData.endDate,
+                creatorId: tripData.creatorId,
+                adminPin: tripData.adminPin ?? undefined,
+                tripStyle: tripData.tripStyle,
+                budgetType: tripData.budgetType,
+                ageGroup: tripData.ageGroup,
+                members,
+                expenses,
+            };
 
-        if (expenseError) return { success: false };
-
-        const trip = mapTripFromDb(tripData, members || [], expenses || []);
-        return { success: true, trip };
-    },
-
-
-
-    async updateExpense(_: string, expense: Expense): Promise<{ success: boolean, error?: string }> {
-        const { error } = await supabase.from('expenses').update({
-            description: expense.description,
-            amount: expense.amount,
-            date: expense.date,
-            category: expense.category,
-            payer_id: expense.payerId,
-            participant_ids: expense.participantIds,
-            // @ts-ignore
-            split_type: expense.splitType || 'EQUAL',
-            // @ts-ignore
-            split_details: expense.splitDetails || {}
-        }).eq('id', expense.id);
-
-        if (error) {
-            // console.error('Error updating expense:', error);
-            return { success: false, error: error.message };
+            return { success: true, trip };
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : 'Unknown error';
+            return { success: false, error: msg };
         }
-        return { success: true };
     },
 
-    async addExpense(tripId: string, expense: Expense): Promise<{ success: boolean, error?: string }> {
-        // Generate a simple ID if one isn't provided (schema demands text id)
+    /**
+     * Add an expense to a trip's expenses sub-collection.
+     */
+    async addExpense(tripId: string, expense: Expense): Promise<{ success: boolean; error?: string }> {
         const expenseId = expense.id || Math.random().toString(36).substr(2, 9);
         const expenseWithId = { ...expense, id: expenseId };
 
         if (!navigator.onLine) {
             OfflineQueue.saveAction('ADD_EXPENSE', { tripId, expense: expenseWithId });
-            return { success: true }; // Optimistically return true
+            return { success: true };
         }
 
-        const { error } = await supabase.from('expenses').insert({
-            id: expenseId,
-            trip_id: tripId,
-            description: expense.description,
-            amount: expense.amount,
-            date: expense.date,
-            category: expense.category,
-            payer_id: expense.payerId,
-            participant_ids: expense.participantIds,
-            created_by: expense.createdBy,
-            // @ts-ignore - implicitly trusting schema has these new columns
-            split_type: expense.splitType || 'EQUAL',
-            // @ts-ignore
-            split_details: expense.splitDetails || {}
-        });
-
-        if (error) {
-            // If offline error, queue it
-            if (error.message.includes('fetch') || error.message.includes('network')) {
+        try {
+            const expenseRef = doc(db, 'trips', tripId, 'expenses', expenseId);
+            await setDoc(expenseRef, {
+                description: expense.description,
+                amount: expense.amount,
+                date: expense.date,
+                category: expense.category,
+                payerId: expense.payerId,
+                participantIds: expense.participantIds,
+                createdBy: expense.createdBy,
+                splitType: expense.splitType ?? 'EQUAL',
+                splitDetails: expense.splitDetails ?? {},
+                createdAt: serverTimestamp(),
+            });
+            return { success: true };
+        } catch (err: unknown) {
+            if (!navigator.onLine) {
                 OfflineQueue.saveAction('ADD_EXPENSE', { tripId, expense: expenseWithId });
                 return { success: true };
             }
-            // console.error('Error adding expense:', error);
-            return { success: false, error: error.message };
+            const msg = err instanceof Error ? err.message : 'Unknown error';
+            return { success: false, error: msg };
         }
-        return { success: true };
     },
 
-    async deleteExpense(expenseId: string): Promise<boolean> {
-        const { error } = await supabase.from('expenses').delete().eq('id', expenseId);
-        if (error) {
-            // console.error(error);
+    /**
+     * Update an existing expense.
+     */
+    async updateExpense(tripId: string, expense: Expense): Promise<{ success: boolean; error?: string }> {
+        try {
+            const expenseRef = doc(db, 'trips', tripId, 'expenses', expense.id);
+            await updateDoc(expenseRef, {
+                description: expense.description,
+                amount: expense.amount,
+                date: expense.date,
+                category: expense.category,
+                payerId: expense.payerId,
+                participantIds: expense.participantIds,
+                splitType: expense.splitType ?? 'EQUAL',
+                splitDetails: expense.splitDetails ?? {},
+            });
+            return { success: true };
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : 'Unknown error';
+            return { success: false, error: msg };
+        }
+    },
+
+    /**
+     * Delete a single expense.
+     */
+    async deleteExpense(expenseId: string, tripId?: string): Promise<boolean> {
+        try {
+            // We need tripId to locate the sub-collection
+            if (!tripId) return false;
+            await deleteDoc(doc(db, 'trips', tripId, 'expenses', expenseId));
+            return true;
+        } catch {
             return false;
         }
-        return true;
     },
 
+    /**
+     * Delete an entire trip and all its sub-collections.
+     * Firestore doesn't auto-delete sub-collections, so we batch-delete them.
+     */
     async deleteTrip(tripId: string): Promise<boolean> {
-        const { error } = await supabase.from('trips').delete().eq('id', tripId);
-        if (error) {
-            // console.error('Error deleting trip:', error);
+        try {
+            const batch = writeBatch(db);
+
+            // Delete all expenses
+            const expSnap = await getDocs(collection(db, 'trips', tripId, 'expenses'));
+            expSnap.docs.forEach(d => batch.delete(d.ref));
+
+            // Delete all members
+            const memSnap = await getDocs(collection(db, 'trips', tripId, 'members'));
+            memSnap.docs.forEach(d => batch.delete(d.ref));
+
+            // Delete the trip itself
+            batch.delete(doc(db, 'trips', tripId));
+
+            await batch.commit();
+            return true;
+        } catch {
             return false;
         }
-        return true;
     },
 
+    /**
+     * Remove a member from a trip (and clean up their expenses).
+     */
     async removeMember(tripId: string, memberId: string): Promise<boolean> {
-        // 1. Fetch all expenses to analyze
-        const { data: expenses } = await supabase
-            .from('expenses')
-            .select('*')
-            .eq('trip_id', tripId);
+        try {
+            const batch = writeBatch(db);
 
-        if (!expenses) {
-            console.error('Failed to fetch expenses for deletion analysis');
-            return false;
-        }
+            // Fetch all expenses to check involvement
+            const expSnap = await getDocs(collection(db, 'trips', tripId, 'expenses'));
 
-        const expensesToDelete: string[] = [];
-        const expensesToUpdate: { id: string, participant_ids: string[] }[] = [];
-
-        for (const e of expenses) {
-            // Case A: Member created or paid for it -> Delete the expense
-            // (Assuming "fake name" means their entered expenses are invalid)
-            if (e.payer_id === memberId || e.created_by === memberId) {
-                expensesToDelete.push(e.id);
-                continue;
-            }
-
-            // Case B: Member is a participant -> Remove from split
-            if (e.participant_ids.includes(memberId)) {
-                const newParticipants = e.participant_ids.filter((id: string) => id !== memberId);
-
-                if (newParticipants.length === 0) {
-                    // If no one else is paying, delete it
-                    expensesToDelete.push(e.id);
-                } else {
-                    expensesToUpdate.push({ id: e.id, participant_ids: newParticipants });
+            for (const d of expSnap.docs) {
+                const data = d.data();
+                // If member paid or created — delete expense
+                if (data.payerId === memberId || data.createdBy === memberId) {
+                    batch.delete(d.ref);
+                    continue;
+                }
+                // If member is in the split — remove from participantIds
+                if ((data.participantIds as string[]).includes(memberId)) {
+                    const newIds = (data.participantIds as string[]).filter(id => id !== memberId);
+                    if (newIds.length === 0) {
+                        batch.delete(d.ref);
+                    } else {
+                        batch.update(d.ref, { participantIds: newIds });
+                    }
                 }
             }
-        }
 
-        // 2. Perform Batch Updates
-        if (expensesToDelete.length > 0) {
-            const { error } = await supabase.from('expenses').delete().in('id', expensesToDelete);
-            if (error) {
-                // console.error("Error deleting expenses:", error);
-                return false;
-            }
-        }
+            // Delete member doc
+            batch.delete(doc(db, 'trips', tripId, 'members', memberId));
 
-        for (const update of expensesToUpdate) {
-            const { error } = await supabase
-                .from('expenses')
-                .update({ participant_ids: update.participant_ids })
-                .eq('id', update.id);
-            if (error) {
-                // console.error("Error updating split:", error);
-                return false;
-            }
-        }
-
-        // 3. Delete the Member
-        const { error: memberError } = await supabase
-            .from('members')
-            .delete()
-            .match({ trip_id: tripId, user_id: memberId });
-
-        if (memberError) {
-            console.error('Error deleting member from DB:', memberError);
+            await batch.commit();
+            return true;
+        } catch {
             return false;
         }
-
-        return true;
     },
 
-    subscribeToTrip(tripId: string, onUpdate: () => void, onDelete?: () => void) {
-        const channel = supabase
-            .channel(`trip:${tripId}`)
-            .on(
-                'postgres_changes',
-                { event: '*', schema: 'public', table: 'expenses', filter: `trip_id=eq.${tripId}` },
-                () => onUpdate()
-            )
-            .on(
-                'postgres_changes',
-                { event: '*', schema: 'public', table: 'members', filter: `trip_id=eq.${tripId}` },
-                () => onUpdate()
-            )
-            .on(
-                'postgres_changes',
-                { event: 'DELETE', schema: 'public', table: 'trips', filter: `id=eq.${tripId}` },
-                () => {
-                    if (onDelete) onDelete();
-                }
-            )
-            .subscribe();
+    /**
+     * Real-time subscription to trip changes (expenses + members).
+     * Returns an unsubscribe function — same interface as Supabase's subscribe.
+     */
+    subscribeToTrip(tripId: string, onUpdate: () => void, onDelete?: () => void): () => void {
+        // Listen to expenses sub-collection
+        const unsubExpenses = onSnapshot(
+            collection(db, 'trips', tripId, 'expenses'),
+            () => onUpdate(),
+            () => { } // silent error
+        );
 
+        // Listen to members sub-collection
+        const unsubMembers = onSnapshot(
+            collection(db, 'trips', tripId, 'members'),
+            () => onUpdate(),
+            () => { }
+        );
+
+        // Listen to the trip document itself (catches delete)
+        const unsubTrip = onSnapshot(
+            doc(db, 'trips', tripId),
+            (snap) => {
+                if (!snap.exists() && onDelete) onDelete();
+            },
+            () => { }
+        );
+
+        // Return a combined unsubscribe
         return () => {
-            supabase.removeChannel(channel);
+            unsubExpenses();
+            unsubMembers();
+            unsubTrip();
         };
     },
 
+    /**
+     * Process any queued offline actions once back online.
+     */
     async syncPendingActions(): Promise<void> {
         if (!navigator.onLine || !OfflineQueue.hasPending()) return;
 
@@ -325,14 +332,13 @@ export const TripService = {
                     const { success } = await this.addExpense(tripId, expense);
                     if (success) processedIds.push(action.id);
                 }
-                // Handle other types if needed
             } catch (e) {
-                console.error("Sync failed for action", action.id, e);
+                console.error('Sync failed for action', action.id, e);
             }
         }
 
         if (processedIds.length > 0) {
             OfflineQueue.clearProcessed(processedIds);
         }
-    }
+    },
 };

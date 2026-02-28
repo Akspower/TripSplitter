@@ -11,8 +11,8 @@
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
-    "@supabase/supabase-js": "^2.90.1",
     "clsx": "^2.1.1",
+    "firebase": "^12.10.0",
     "framer-motion": "^12.27.1",
     "groq-sdk": "^0.37.0",
     "jspdf": "^4.0.0",
