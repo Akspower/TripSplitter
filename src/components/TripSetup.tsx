@@ -79,22 +79,53 @@ const TripSetup: React.FC<{ onComplete: (trip: Trip, myId: string) => void; onBa
     };
 
     const finishSetup = async () => {
-        if (!members.length) { toast.error('Add at least one other person'); return; }
+        if (members.length === 0) { toast.error('Add at least one other person'); return; }
+        if (isCreating) return; // prevent double-tap
         setIsCreating(true);
+
         const creatorId = Math.random().toString(36).substr(2, 9);
         const tripId = Math.floor(100000 + Math.random() * 900000).toString();
         const allMembers: Member[] = [
             { id: creatorId, name: creatorName, isCreator: true, avatarColor: getAvatarColor(0) },
             ...members.map((m, i) => ({ id: m.id, name: m.name, isCreator: false, avatarColor: getAvatarColor(i + 1) }))
         ];
-        const newTrip: Trip = { id: tripId, ...formData, members: allMembers, expenses: [], creatorId, adminPin: adminPin || undefined, tripStyle, budgetType, ageGroup };
-        const result = await TripService.createTrip(newTrip);
-        if (result.success) {
-            localStorage.removeItem('trip_setup_state');
-            toast.success('Trip created!');
-            onComplete(newTrip, creatorId);
-        } else {
-            toast.error(`Failed: ${result.error || 'Unknown error'}`);
+        const newTrip: Trip = {
+            id: tripId, ...formData,
+            members: allMembers, expenses: [],
+            creatorId, adminPin: adminPin || undefined,
+            tripStyle, budgetType, ageGroup
+        };
+
+        // Save IDs to localStorage BEFORE network call
+        // If network call succeeds but response is lost (PWA backgrounded), state is preserved
+        localStorage.setItem('tripId', tripId);
+        localStorage.setItem('myId', creatorId);
+        localStorage.setItem('cachedTrip', JSON.stringify(newTrip));
+
+        // 12s timeout so the button never sticks forever on slow/no network
+        const timeoutPromise = new Promise<{ success: false; error: string }>(resolve =>
+            setTimeout(() => resolve({ success: false, error: 'Connection timed out. Check your internet and try again.' }), 12000)
+        );
+
+        try {
+            const result = await Promise.race([TripService.createTrip(newTrip), timeoutPromise]);
+            if (result.success) {
+                localStorage.removeItem('trip_setup_state');
+                toast.success('Trip created! 🚀');
+                onComplete(newTrip, creatorId);
+            } else {
+                // Clean up pre-saved state on failure
+                localStorage.removeItem('tripId');
+                localStorage.removeItem('myId');
+                localStorage.removeItem('cachedTrip');
+                toast.error(result.error || 'Failed to create trip. Please try again.');
+                setIsCreating(false);
+            }
+        } catch (err: unknown) {
+            localStorage.removeItem('tripId');
+            localStorage.removeItem('myId');
+            localStorage.removeItem('cachedTrip');
+            toast.error('Something went wrong. Please try again.');
             setIsCreating(false);
         }
     };

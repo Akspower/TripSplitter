@@ -39,7 +39,6 @@ const QuoteBar: React.FC<QuoteBarProps> = ({
             <button
                 onClick={rotate}
                 className={`w-full flex items-start gap-2.5 px-4 py-3 rounded-2xl bg-[#b613ec]/8 border border-[#b613ec]/15 text-left active:scale-[0.99] transition-all touch-manipulation ${className}`}
-                title="Tap for a new quote"
             >
                 <span className="text-lg shrink-0 mt-0.5">💬</span>
                 <p
@@ -51,7 +50,6 @@ const QuoteBar: React.FC<QuoteBarProps> = ({
                 >
                     "{quote.text}"
                 </p>
-                <span className="text-[rgba(244,244,248,0.15)] text-[9px] font-bold uppercase tracking-widest shrink-0 mt-0.5">tap</span>
             </button>
         );
     }
@@ -90,10 +88,6 @@ const QuoteBar: React.FC<QuoteBarProps> = ({
                         }}
                     >
                         {quote.text}
-                    </p>
-                    <p className="text-[9px] font-bold uppercase tracking-widest text-[rgba(244,244,248,0.2)] mt-2 flex items-center gap-1.5">
-                        <span className="w-4 h-[1px] bg-[rgba(244,244,248,0.1)] inline-block" />
-                        tap for another
                     </p>
                 </div>
             </div>

@@ -15,10 +15,28 @@ const GRADIENTS = [
     'from-sky-400 to-blue-600',
 ];
 
+// Unique avatar emojis — travel & nature themed, no gender, completely unique per slot
+// Deterministic by index so the same person always gets the same avatar in a trip
+const AVATAR_EMOJIS = [
+    '🦁', '🐯', '🦊', '🐺',
+    '🦅', '🦋', '🐉', '🦄',
+    '🐬', '🦩', '🦖', '🦇',
+    '🌵', '⚡', '🔥', '🌊',
+    '🏔️', '🌙', '☀️', '🎯',
+];
+
 export const getAvatarColor = (index: number): string => {
     // Return a simple bg class for backward compat
-    const classes = ['bg-violet-500', 'bg-emerald-500', 'bg-rose-500', 'bg-amber-500', 'bg-blue-500', 'bg-cyan-500', 'bg-yellow-500', 'bg-pink-500', 'bg-purple-500', 'bg-teal-500', 'bg-red-500', 'bg-sky-500'];
+    const classes = [
+        'bg-violet-500', 'bg-emerald-500', 'bg-rose-500', 'bg-amber-500',
+        'bg-blue-500', 'bg-cyan-500', 'bg-yellow-500', 'bg-pink-500',
+        'bg-purple-500', 'bg-teal-500', 'bg-red-500', 'bg-sky-500',
+    ];
     return classes[index % classes.length];
+};
+
+export const getAvatarEmoji = (index: number): string => {
+    return AVATAR_EMOJIS[index % AVATAR_EMOJIS.length];
 };
 
 interface MemberAvatarProps {
@@ -29,9 +47,9 @@ interface MemberAvatarProps {
 }
 
 const sizeClasses = {
-    sm: 'w-8 h-8 text-xs',
-    md: 'w-12 h-12 text-sm',
-    lg: 'w-16 h-16 text-xl',
+    sm: 'w-8 h-8 text-sm',
+    md: 'w-12 h-12 text-lg',
+    lg: 'w-16 h-16 text-2xl',
 };
 
 const radii = {
@@ -42,14 +60,16 @@ const radii = {
 
 const MemberAvatar: React.FC<MemberAvatarProps> = ({ name, index, size = 'md', isYou = false }) => {
     const gradient = isYou ? 'from-violet-500 to-[#b613ec]' : GRADIENTS[index % GRADIENTS.length];
-    const initial = name.charAt(0).toUpperCase();
+    const emoji = getAvatarEmoji(isYou ? 0 : index);
 
     return (
         <div
-            className={`${sizeClasses[size]} ${radii[size]} bg-gradient-to-br ${gradient} flex items-center justify-center font-bold text-white shadow-md shrink-0`}
+            className={`${sizeClasses[size]} ${radii[size]} bg-gradient-to-br ${gradient} flex items-center justify-center shadow-md shrink-0 select-none relative overflow-hidden`}
             title={name}
         >
-            {initial}
+            {/* Subtle inner glow */}
+            <div className="absolute inset-0 bg-white/10 rounded-inherit" />
+            <span className="relative z-10 leading-none">{emoji}</span>
         </div>
     );
 };

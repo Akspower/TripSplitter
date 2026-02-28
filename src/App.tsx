@@ -377,35 +377,35 @@ export default function App() {
                   <div className="absolute -top-10 -right-10 w-48 h-48 bg-[#b613ec]/20 rounded-full blur-3xl pointer-events-none" />
                   <div className="absolute -bottom-8 -left-8 w-40 h-40 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none" />
 
-                  {/* Trip Header */}
-                  <div className="flex items-start justify-between mb-5 relative z-10">
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                        <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Live Trip</span>
-                      </div>
-                      <h3 className="text-xl font-bold text-[#F4F4F8] leading-tight">Goa Beach Trip 🏖️</h3>
-                      <p className="text-xs text-[rgba(244,244,248,0.4)] mt-0.5">Panaji, South Goa • 4 nights</p>
+                  {/* Trip Header — single column, no more overlap */}
+                  <div className="mb-5 relative z-10 pr-24">
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                      <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Live Trip</span>
                     </div>
-                    <div className="text-right">
-                      <p className="text-[10px] font-bold text-[rgba(244,244,248,0.35)] uppercase tracking-widest mb-0.5">Total Spent</p>
-                      <p className="text-2xl font-bold text-[#F4F4F8]">₹18,420</p>
-                    </div>
+                    <h3 className="text-xl font-bold text-[#F4F4F8] leading-tight">Goa Beach Trip 🏖️</h3>
+                    <p className="text-xs text-[rgba(244,244,248,0.4)] mt-0.5">Panaji, South Goa • 4 nights</p>
                   </div>
 
-                  {/* Member Avatars */}
-                  <div className="flex items-center gap-2 mb-5 relative z-10">
-                    {[
-                      { n: 'Arjun', g: 'from-violet-500 to-[#b613ec]' },
-                      { n: 'Priya', g: 'from-rose-400 to-pink-600' },
-                      { n: 'Sahil', g: 'from-emerald-400 to-teal-600' },
-                      { n: 'Kiran', g: 'from-amber-400 to-orange-500' },
-                    ].map((m, i) => (
-                      <div key={i} className={`w-9 h-9 rounded-xl bg-gradient-to-br ${m.g} flex items-center justify-center font-bold text-white text-sm shadow-lg border-2 border-[#0d0817]`}>
-                        {m.n[0]}
-                      </div>
-                    ))}
-                    <span className="text-[10px] font-bold text-[rgba(244,244,248,0.35)] ml-1">4 members</span>
+                  {/* Member Avatars + Total Spent row */}
+                  <div className="flex items-center justify-between mb-5 relative z-10">
+                    <div className="flex items-center gap-2">
+                      {[
+                        { n: 'Arjun', g: 'from-violet-500 to-[#b613ec]' },
+                        { n: 'Priya', g: 'from-rose-400 to-pink-600' },
+                        { n: 'Sahil', g: 'from-emerald-400 to-teal-600' },
+                        { n: 'Kiran', g: 'from-amber-400 to-orange-500' },
+                      ].map((m, i) => (
+                        <div key={i} className={`w-9 h-9 rounded-xl bg-gradient-to-br ${m.g} flex items-center justify-center font-bold text-white text-sm shadow-lg border-2 border-[#0d0817]`}>
+                          {m.n[0]}
+                        </div>
+                      ))}
+                      <span className="text-[10px] font-bold text-[rgba(244,244,248,0.35)] ml-1">4 members</span>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[9px] font-bold text-[rgba(244,244,248,0.3)] uppercase tracking-widest">Total Spent</p>
+                      <p className="text-xl font-bold text-[#F4F4F8]">₹18,420</p>
+                    </div>
                   </div>
 
                   {/* Mock Expense Items */}

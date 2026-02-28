@@ -52,9 +52,12 @@ const MEMBER_GRADIENTS = [
     'from-blue-400 to-indigo-600', 'from-cyan-400 to-blue-500',
 ];
 
+import { getAvatarEmoji } from './MemberAvatar';
+
 const InitialAvatar: React.FC<{ name: string; size?: string; index?: number }> = ({ name, size = 'w-10 h-10', index = 0 }) => (
-    <div className={`${size} rounded-2xl bg-gradient-to-br ${MEMBER_GRADIENTS[index % MEMBER_GRADIENTS.length]} flex items-center justify-center font-bold text-white shrink-0 shadow-md`}>
-        {name.charAt(0).toUpperCase()}
+    <div className={`${size} rounded-2xl bg-gradient-to-br ${MEMBER_GRADIENTS[index % MEMBER_GRADIENTS.length]} flex items-center justify-center shrink-0 shadow-md select-none overflow-hidden relative`} title={name}>
+        <div className="absolute inset-0 bg-white/10" />
+        <span className="relative z-10 text-base leading-none">{getAvatarEmoji(index)}</span>
     </div>
 );
 
