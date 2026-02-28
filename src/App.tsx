@@ -153,10 +153,18 @@ export default function App() {
 
   useEffect(() => {
     if (currentTrip?.id && !isOffline) {
-      const unsubscribe = TripService.subscribeToTrip(currentTrip.id, () => {
-        setIsSyncing(true);
-        setTimeout(() => loadTrip(currentTrip.id, true), 500);
-      });
+      const unsubscribe = TripService.subscribeToTrip(
+        currentTrip.id,
+        () => {
+          setIsSyncing(true);
+          setTimeout(() => loadTrip(currentTrip.id, true), 500);
+        },
+        () => {
+          // Trip was deleted by admin or expired — smooth exit
+          toast('This trip has ended', { icon: '👋' });
+          handleReset();
+        }
+      );
       return unsubscribe;
     }
   }, [currentTrip?.id, isOffline]);
@@ -173,6 +181,9 @@ export default function App() {
         setLoadingTrip(false);
       } else if (result.error === 'NOT_FOUND') {
         toast.error("This trip no longer exists.");
+        handleReset();
+      } else if (result.error === 'EXPIRED') {
+        toast('This trip expired after 45 days', { icon: '⏰' });
         handleReset();
       } else {
         setLoadingTrip(false);

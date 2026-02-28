@@ -35,6 +35,7 @@ export interface Trip {
   members: Member[];
   expenses: Expense[];
   creatorId: string;
+  createdAt?: string;
   adminPin?: string;
   tripStyle?: TripStyle;
   budgetType?: BudgetType;

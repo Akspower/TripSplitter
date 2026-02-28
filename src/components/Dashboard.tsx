@@ -10,6 +10,7 @@ import ConfirmDialog from './ui/ConfirmDialog';
 import { vibrate, HapticPatterns } from '../utils/haptics';
 import { motion, AnimatePresence } from 'framer-motion';
 import QuoteBar from './QuoteBar';
+import { QRCodeSVG } from 'qrcode.react';
 
 const TABS = [
     { id: 'expenses', label: 'Expenses', icon: 'receipt_long' },
@@ -258,6 +259,16 @@ const Dashboard: React.FC<{
                                 {trip.members.length} members
                             </span>
                         </div>
+                        {/* Expiry pill */}
+                        {trip.createdAt && (() => {
+                            const daysLeft = Math.max(0, 45 - Math.floor((Date.now() - new Date(trip.createdAt).getTime()) / (1000 * 60 * 60 * 24)));
+                            return (
+                                <div className={`mt-3 flex items-center gap-2 px-3 py-2 rounded-xl border text-[10px] font-bold uppercase tracking-widest ${daysLeft <= 7 ? 'bg-rose-400/10 border-rose-400/20 text-rose-400' : 'bg-white/5 border-white/5 text-[rgba(244,244,248,0.35)]'}`}>
+                                    <span className="material-symbols-outlined text-xs">schedule</span>
+                                    <span>Expires in {daysLeft} day{daysLeft !== 1 ? 's' : ''}</span>
+                                </div>
+                            );
+                        })()}
                     </div>
                 </div>
 
@@ -319,7 +330,7 @@ const Dashboard: React.FC<{
                         ))}
                     </div>
 
-                    <AnimatePresence mode="popLayout">
+                    <AnimatePresence mode="popLayout" initial={false}>
                         <motion.div
                             key={activeTab}
                             initial={{ opacity: 0 }}
@@ -508,7 +519,7 @@ const Dashboard: React.FC<{
                                                     <motion.div key={idx}
                                                         initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                                                         transition={{ duration: 0.15 }}
-                                                        className={`rounded-2xl border relative overflow-hidden ${isFromMe ? 'glass-card-primary border-rose-400/30' : isToMe ? 'glass-card-primary border-emerald-400/30' : 'glass-card border-white/5 opacity-60'}`}>
+                                                        className={`rounded-2xl border relative overflow-hidden card-3d ${isFromMe ? 'glass-card-primary border-rose-400/30' : isToMe ? 'glass-card-primary border-emerald-400/30' : 'glass-card border-white/5 opacity-60'}`}>
                                                         {/* Top accent line */}
                                                         {isFromMe && <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-rose-500/0 via-rose-500 to-rose-500/0" />}
                                                         {isToMe && <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-emerald-500/0 via-emerald-500 to-emerald-500/0" />}
@@ -518,13 +529,13 @@ const Dashboard: React.FC<{
                                                             {isFromMe && (
                                                                 <p className="text-[10px] font-bold uppercase tracking-widest text-rose-400 mb-3 flex items-center gap-1">
                                                                     <span className="material-symbols-outlined text-sm">arrow_upward</span>
-                                                                    You need to pay
+                                                                    YOU OWE
                                                                 </p>
                                                             )}
                                                             {isToMe && (
                                                                 <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-400 mb-3 flex items-center gap-1">
                                                                     <span className="material-symbols-outlined text-sm">arrow_downward</span>
-                                                                    Awaiting payment from them
+                                                                    YOU RECEIVE
                                                                 </p>
                                                             )}
 
@@ -567,9 +578,7 @@ const Dashboard: React.FC<{
                                                                     onClick={() => {
                                                                         const debtKey = `${d.from}-${d.to}`;
                                                                         setPaidDebtKeys(prev => new Set(prev).add(debtKey));
-                                                                        const msg = `✅ Payment recorded: ${myName} → ${toMember?.name} — ${formatINR(d.amount)} for "${trip.name}"`;
-                                                                        navigator.clipboard.writeText(msg).catch(() => { });
-                                                                        toast.success(`Marked as paid! Message copied — share it with ${toMember?.name}.`, { icon: '✅' });
+                                                                        toast.success(`Marked as paid!`, { icon: '✅' });
                                                                     }}
                                                                     className="w-full py-2.5 rounded-xl bg-rose-500/15 border border-rose-500/25 text-rose-300 text-xs font-bold uppercase tracking-wider hover:bg-rose-500/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                                                                 >
@@ -864,12 +873,12 @@ const Dashboard: React.FC<{
             </div>
 
             {/* ── Team Management Modal ───────────────── */}
-            <AnimatePresence>
+            <AnimatePresence initial={false}>
                 {showManageTeam && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                         className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
-                        <motion.div initial={{ scale: 0.92, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.92, opacity: 0 }} transition={{ type: 'spring', damping: 25 }}
+                        <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }} transition={{ duration: 0.2, ease: "easeOut" }}
                             className="glass-card w-full max-w-md rounded-3xl p-6 shadow-2xl border border-white/10">
                             <div className="flex items-center justify-between mb-6">
                                 <h3 className="text-xl font-bold text-[#F4F4F8]">Team Members</h3>
@@ -888,6 +897,21 @@ const Dashboard: React.FC<{
                                     className="btn-primary px-4 py-2 rounded-xl text-xs font-bold shrink-0">
                                     Copy Link
                                 </button>
+                            </div>
+
+                            {/* QR Code */}
+                            <div className="mb-5 flex flex-col items-center gap-3">
+                                <div className="bg-white rounded-2xl p-4 shadow-lg">
+                                    <QRCodeSVG
+                                        value={`${window.location.origin}/?join=${trip.id}`}
+                                        size={160}
+                                        bgColor="#ffffff"
+                                        fgColor="#0A0A0F"
+                                        level="H"
+                                        includeMargin={false}
+                                    />
+                                </div>
+                                <p className="text-[10px] text-[rgba(244,244,248,0.35)] font-bold uppercase tracking-widest">Scan to join this trip</p>
                             </div>
 
                             <div className="space-y-3 max-h-[55vh] overflow-y-auto pr-1">
@@ -913,7 +937,7 @@ const Dashboard: React.FC<{
                     </motion.div>
                 )}
             </AnimatePresence>
-        </div>
+        </div >
     );
 };
 

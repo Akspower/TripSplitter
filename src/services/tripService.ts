@@ -9,6 +9,8 @@ import { OfflineQueue } from './offlineQueue';
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
+const TRIP_TTL_DAYS = 45;
+
 const mapExpenseFromDoc = (id: string, data: Record<string, any>): Expense => ({
     id,
     description: data.description,
@@ -120,6 +122,21 @@ export const TripService = {
                 mapExpenseFromDoc(d.id, d.data())
             );
 
+            // ── TTL Check: auto-delete trips older than 45 days ──
+            const createdAtRaw = tripData.createdAt;
+            let createdAtISO: string | undefined;
+            if (createdAtRaw?.toDate) {
+                const createdDate = createdAtRaw.toDate() as Date;
+                createdAtISO = createdDate.toISOString();
+                const ageMs = Date.now() - createdDate.getTime();
+                const ageDays = ageMs / (1000 * 60 * 60 * 24);
+                if (ageDays > TRIP_TTL_DAYS) {
+                    // Trip expired — clean up from Firestore
+                    await this.deleteTrip(tripId);
+                    return { success: false, error: 'EXPIRED' };
+                }
+            }
+
             const trip: Trip = {
                 id: tripId,
                 name: tripData.name,
@@ -127,6 +144,7 @@ export const TripService = {
                 startDate: tripData.startDate,
                 endDate: tripData.endDate,
                 creatorId: tripData.creatorId,
+                createdAt: createdAtISO,
                 adminPin: tripData.adminPin ?? undefined,
                 tripStyle: tripData.tripStyle,
                 budgetType: tripData.budgetType,

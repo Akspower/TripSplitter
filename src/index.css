@@ -78,12 +78,17 @@
     }
 
     .card-3d {
-        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease;
+        transition: transform 0.4s cubic-bezier(0.2, 1, 0.2, 1), box-shadow 0.4s cubic-bezier(0.2, 1, 0.2, 1);
+        transform-style: preserve-3d;
+        will-change: transform, box-shadow;
     }
 
     .card-3d:hover {
-        transform: perspective(800px) rotateY(1.5deg) rotateX(1deg) scale(1.01);
-        box-shadow: 0 32px 80px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(182, 19, 236, 0.15);
+        transform: perspective(1000px) rotateY(1deg) rotateX(1deg) scale(1.01);
+        box-shadow:
+            0 24px 60px rgba(0, 0, 0, 0.4),
+            0 0 0 1px rgba(182, 19, 236, 0.12),
+            inset 0 0 20px rgba(255, 255, 255, 0.02);
     }
 
     .btn-primary {
