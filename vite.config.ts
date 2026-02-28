@@ -10,9 +10,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'],
       manifest: {
-        name: 'SplitWay — Trip Expense Splitter',
-        short_name: 'SplitWay',
-        description: 'Smart expense splitting for group India trips',
+        name: 'TripKhata — Trip Expense Splitter',
+        short_name: 'TripKhata',
+        description: 'Split trip expenses with your squad. Settle debts at the end. Made for India.',
         theme_color: '#0A0A0F',
         background_color: '#0A0A0F',
         display: 'standalone',

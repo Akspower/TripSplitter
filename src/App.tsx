@@ -316,7 +316,7 @@ export default function App() {
 
   // ── Landing / Create / Join ─────────────────────────────────────
   return (
-    <div className="min-h-[100dvh] bg-[#0A0A0F] font-['Space_Grotesk',sans-serif] relative overflow-hidden flex flex-col">
+    <div className="min-h-[100dvh] bg-[#0A0A0F] font-['Plus_Jakarta_Sans',sans-serif] relative overflow-hidden flex flex-col">
       <Toaster
         position="top-center"
         toastOptions={{
@@ -340,8 +340,8 @@ export default function App() {
       {/* Header */}
       <header className="relative z-10 flex items-center justify-between p-5 pb-0">
         <div className="flex items-center gap-2.5">
-          <img src="/icon-192.png" alt="Splitway" className="w-9 h-9 rounded-xl shadow-lg shadow-[#b613ec]/30" />
-          <h2 className="text-xl font-bold tracking-tight text-[#F4F4F8]">SplitWay</h2>
+          <img src="/icon-192.png" alt="TripKhata" className="w-9 h-9 rounded-xl shadow-lg shadow-[#b613ec]/30" />
+          <h2 className="text-xl font-bold tracking-tight text-[#F4F4F8]">Trip<span className="text-[#b613ec]">Khata</span></h2>
         </div>
       </header>
 
