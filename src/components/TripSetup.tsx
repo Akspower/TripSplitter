@@ -131,9 +131,9 @@ const TripSetup: React.FC<{ onComplete: (trip: Trip, myId: string) => void; onBa
     };
 
     const stepVariants = {
-        initial: { opacity: 0, x: 20 },
-        animate: { opacity: 1, x: 0 },
-        exit: { opacity: 0, x: -20 },
+        initial: { opacity: 0 },
+        animate: { opacity: 1 },
+        exit: { opacity: 0 },
     };
 
     // Input class helper
@@ -164,10 +164,9 @@ const TripSetup: React.FC<{ onComplete: (trip: Trip, myId: string) => void; onBa
                 ))}
             </div>
 
-            <AnimatePresence mode="wait">
-                {/* ── Step 1: Who are you ── */}
+            <AnimatePresence>
                 {step === 1 && (
-                    <motion.div key="s1" variants={stepVariants} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.25 }} className="space-y-7">
+                    <motion.div key="s1" variants={stepVariants} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }} className="space-y-7">
                         <div className="text-center">
                             <div className="w-16 h-16 bg-[#b613ec]/20 border border-[#b613ec]/30 rounded-2xl flex items-center justify-center mx-auto mb-5">
                                 <span className="material-symbols-outlined text-[#b613ec] text-3xl">badge</span>
@@ -187,7 +186,7 @@ const TripSetup: React.FC<{ onComplete: (trip: Trip, myId: string) => void; onBa
 
                 {/* ── Step 2: Trip Details ── */}
                 {step === 2 && (
-                    <motion.div key="s2" variants={stepVariants} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.25 }} className="space-y-5">
+                    <motion.div key="s2" variants={stepVariants} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }} className="space-y-5">
                         <div>
                             <h2 className="text-3xl font-bold text-[#F4F4F8] tracking-tight mb-1">Trip Blueprint 🗺️</h2>
                             <p className="text-[rgba(244,244,248,0.4)] text-sm">Where are you headed?</p>
@@ -220,7 +219,7 @@ const TripSetup: React.FC<{ onComplete: (trip: Trip, myId: string) => void; onBa
 
                 {/* ── Step 3: Add Members ── */}
                 {step === 3 && (
-                    <motion.div key="s3" variants={stepVariants} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.25 }} className="space-y-5">
+                    <motion.div key="s3" variants={stepVariants} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }} className="space-y-5">
                         <div>
                             <h2 className="text-3xl font-bold text-[#F4F4F8] tracking-tight mb-1">The Squad 👥</h2>
                             <p className="text-[rgba(244,244,248,0.4)] text-sm">Who's coming along?</p>
@@ -272,7 +271,7 @@ const TripSetup: React.FC<{ onComplete: (trip: Trip, myId: string) => void; onBa
 
                 {/* ── Step 4: Trip Profile ── */}
                 {step === 4 && (
-                    <motion.div key="s4" variants={stepVariants} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.25 }} className="space-y-5">
+                    <motion.div key="s4" variants={stepVariants} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }} className="space-y-5">
                         <div>
                             <h2 className="text-3xl font-bold text-[#F4F4F8] tracking-tight mb-1">Trip Profile ✨</h2>
                             <p className="text-[rgba(244,244,248,0.4)] text-sm">Help our AI give you better suggestions</p>

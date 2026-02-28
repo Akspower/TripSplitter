@@ -70,10 +70,9 @@ const TripJoin: React.FC<{ onJoin: (trip: Trip, myId: string) => void; onBack: (
                 Back
             </button>
 
-            <AnimatePresence mode="wait">
-                {/* ── Step 1: Enter Room ID ── */}
+            <AnimatePresence>
                 {step === 1 && (
-                    <motion.div key="step1" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-6">
+                    <motion.div key="step1" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="space-y-6">
                         <div>
                             <h2 className="text-3xl font-bold text-[#F4F4F8] tracking-tight mb-1">Enter Room ID</h2>
                             <p className="text-[rgba(244,244,248,0.4)] text-sm">6-digit code shared by the trip creator</p>
@@ -107,7 +106,7 @@ const TripJoin: React.FC<{ onJoin: (trip: Trip, myId: string) => void; onBack: (
 
                 {/* ── Step 2: Pick identity ── */}
                 {step === 2 && foundTrip && (
-                    <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-5 relative">
+                    <motion.div key="step2" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="space-y-5 relative">
 
                         {/* PIN Modal */}
                         <AnimatePresence>

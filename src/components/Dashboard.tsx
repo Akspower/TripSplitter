@@ -26,7 +26,7 @@ function useCountUp(target: number, deps: unknown[] = []): number {
     const [val, setVal] = useState(0);
     useEffect(() => {
         let start = 0;
-        const duration = 600;
+        const duration = 400;
         const step = 16;
         const increment = target / (duration / step);
         const timer = setInterval(() => {
@@ -314,13 +314,13 @@ const Dashboard: React.FC<{
                         ))}
                     </div>
 
-                    <AnimatePresence mode="wait">
+                    <AnimatePresence>
                         <motion.div
                             key={activeTab}
-                            initial={{ opacity: 0, y: 12 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -8 }}
-                            transition={{ duration: 0.25 }}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.2 }}
                         >
                             {/* ── EXPENSES TAB ── */}
                             {activeTab === 'expenses' && (
@@ -361,12 +361,12 @@ const Dashboard: React.FC<{
                                             </div>
                                         </div>
                                     ) : (
-                                        filteredExpenses.map((e, idx) => {
+                                        filteredExpenses.map((e) => {
                                             const payerIdx = trip.members.findIndex(m => m.id === e.payerId);
                                             return (
                                                 <motion.div key={e.id}
-                                                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                                                    transition={{ delay: idx * 0.04, duration: 0.25 }}
+                                                    initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                                                    transition={{ duration: 0.2 }}
                                                     className={`glass-card rounded-2xl p-4 flex items-start gap-3 transition-all duration-200 active:scale-[0.98] group ${!e.participantIds.includes(myId) ? 'opacity-40' : ''}`}>
                                                     <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center text-2xl border border-white/5 shrink-0 group-hover:bg-[#b613ec]/10 transition-colors">
                                                         {CATEGORY_EMOJI[e.category] || '🧾'}

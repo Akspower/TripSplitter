@@ -1,4 +1,4 @@
-import { useState, useEffect, Suspense, lazy } from 'react';
+import { useState, useEffect, Suspense, lazy, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import toast, { Toaster } from 'react-hot-toast';
 import type { Trip, Expense } from './types';
@@ -61,6 +61,8 @@ export default function App() {
   }, []);
 
   // ── Browser History Integration ────────────────────────────────
+  const isInitialMount = useRef(true);
+
   useEffect(() => {
     const handlePopState = (event: PopStateEvent) => {
       const state = event.state;
@@ -76,17 +78,29 @@ export default function App() {
     };
 
     window.addEventListener('popstate', handlePopState);
-    if (!window.history.state) {
-      window.history.replaceState({ viewMode: 'landing', isTripActive: !!currentTrip }, '');
+
+    // On mount, if we have state in history, use it
+    const initialState = window.history.state;
+    if (initialState) {
+      if (initialState.viewMode) setViewMode(initialState.viewMode);
+      if (initialState.initialTripId) setInitialTripId(initialState.initialTripId);
+      // Note: Trip hydration is handled by localStorage effect
+    } else {
+      window.history.replaceState({ viewMode: 'landing', isTripActive: !!currentTrip, initialTripId }, '');
     }
+
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [currentTrip]);
+  }, []); // Only run on mount
 
   useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
     const isTripActive = !!currentTrip;
     const currentState = window.history.state;
-    if (!currentState || currentState.viewMode !== viewMode || currentState.isTripActive !== isTripActive) {
-      window.history.pushState({ viewMode, isTripActive }, '');
+    if (!currentState || currentState.viewMode !== viewMode || currentState.isTripActive !== isTripActive || currentState.initialTripId !== initialTripId) {
+      window.history.pushState({ viewMode, isTripActive, initialTripId }, '');
     }
   }, [viewMode, currentTrip]);
 
@@ -277,13 +291,14 @@ export default function App() {
         onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
       />
 
-      <AnimatePresence mode="wait">
+      <AnimatePresence>
         {loadingTrip ? (
           <motion.div
             key="loading"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
             className="flex-1 flex items-center justify-center p-6 relative z-10"
           >
             <div className="w-full max-w-sm space-y-8 animate-pulse">
@@ -303,10 +318,10 @@ export default function App() {
         ) : currentTrip ? (
           <motion.div
             key="active-trip"
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 1.02 }}
-            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
             className="flex-1 flex flex-col relative z-10 overflow-auto no-scrollbar"
           >
             <Header
@@ -367,14 +382,14 @@ export default function App() {
             </header>
 
             <div className="flex-1 flex flex-col justify-center items-center px-5 relative z-10 pb-16 pt-6">
-              <AnimatePresence mode="wait">
+              <AnimatePresence>
                 {viewMode === 'landing' && (
                   <motion.div
                     key="landing"
-                    initial={{ opacity: 0, y: 20 }}
+                    initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.4, ease: 'easeOut' }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.3, ease: 'easeOut' }}
                     className="max-w-md mx-auto w-full"
                   >
                     {/* ── Premium Hero Trip Preview Card ── */}

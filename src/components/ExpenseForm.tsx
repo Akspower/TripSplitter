@@ -89,7 +89,7 @@ const ExpenseForm: React.FC<{
                 initial={{ y: '100%', opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 exit={{ y: '100%', opacity: 0 }}
-                transition={{ type: 'spring', damping: 30, stiffness: 320 }}
+                transition={{ duration: 0.25, ease: 'easeOut' }}
                 // willChange prevents iOS blank/black flash during keyboard appearance
                 style={{ willChange: 'transform', WebkitOverflowScrolling: 'touch' }}
                 className="w-full max-w-xl bg-[#0d0817] rounded-t-3xl sm:rounded-3xl border-t sm:border border-white/10 shadow-2xl overflow-hidden"
