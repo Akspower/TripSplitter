@@ -364,13 +364,13 @@ const Dashboard: React.FC<{
                                                 <motion.div key={e.id}
                                                     initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
                                                     transition={{ delay: idx * 0.04, duration: 0.25 }}
-                                                    className={`glass-card rounded-2xl p-4 flex items-center gap-4 transition-all duration-200 active:scale-[0.98] group ${!e.participantIds.includes(myId) ? 'opacity-40' : ''}`}>
+                                                    className={`glass-card rounded-2xl p-4 flex items-start gap-3 transition-all duration-200 active:scale-[0.98] group ${!e.participantIds.includes(myId) ? 'opacity-40' : ''}`}>
                                                     <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center text-2xl border border-white/5 shrink-0 group-hover:bg-[#b613ec]/10 transition-colors">
                                                         {CATEGORY_EMOJI[e.category] || '🧾'}
                                                     </div>
                                                     <div className="flex-1 min-w-0">
-                                                        <div className="flex items-center gap-2 mb-0.5">
-                                                            <h4 className="font-bold text-[#F4F4F8] truncate text-sm">{e.description}</h4>
+                                                        <div className="flex items-start gap-2 mb-0.5">
+                                                            <h4 className="font-bold text-[#F4F4F8] text-sm leading-snug line-clamp-2 flex-1">{e.description}</h4>
                                                             {(e.createdBy === myId || e.payerId === myId) && (
                                                                 <button onClick={() => { vibrate(HapticPatterns.soft); onEditExpense(e); }}
                                                                     className="shrink-0 sm:opacity-0 sm:group-hover:opacity-100 opacity-100 transition-opacity p-1 rounded-full text-[rgba(244,244,248,0.3)] hover:text-[#b613ec]">
@@ -526,7 +526,7 @@ const Dashboard: React.FC<{
                                                                 <div className="flex items-center gap-2 flex-1 min-w-0">
                                                                     <InitialAvatar name={fromMember?.name || '?'} size="w-11 h-11" index={fromIdx} />
                                                                     <div className="min-w-0">
-                                                                        <p className="font-bold text-[#F4F4F8] text-sm truncate">{isFromMe ? 'You' : fromMember?.name || '?'}</p>
+                                                                        <p className="font-bold text-[#F4F4F8] text-sm leading-tight break-words">{isFromMe ? 'You' : fromMember?.name || '?'}</p>
                                                                         <p className="text-[10px] text-[rgba(244,244,248,0.35)]">pays</p>
                                                                     </div>
                                                                 </div>
@@ -547,7 +547,7 @@ const Dashboard: React.FC<{
                                                                 <div className="flex items-center gap-2 flex-1 min-w-0 flex-row-reverse">
                                                                     <InitialAvatar name={toMember?.name || '?'} size="w-11 h-11" index={toIdx} />
                                                                     <div className="min-w-0 text-right">
-                                                                        <p className="font-bold text-[#F4F4F8] text-sm truncate">{isToMe ? 'You' : toMember?.name || '?'}</p>
+                                                                        <p className="font-bold text-[#F4F4F8] text-sm leading-tight break-words">{isToMe ? 'You' : toMember?.name || '?'}</p>
                                                                         <p className="text-[10px] text-[rgba(244,244,248,0.35)]">receives</p>
                                                                     </div>
                                                                 </div>
