@@ -351,31 +351,68 @@
     }
 }
 
-/* Universal travel emoji rain */
-@keyframes particleFall {
+/* Premium Background Animations */
+@keyframes orbFloat {
+
+    0%,
+    100% {
+        transform: translateY(0) translateX(0);
+    }
+
+    33% {
+        transform: translateY(-20px) translateX(10px);
+    }
+
+    66% {
+        transform: translateY(10px) translateX(-15px);
+    }
+}
+
+@keyframes ringPulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 0.1;
+    }
+
+    50% {
+        transform: scale(1.1);
+        opacity: 0.2;
+    }
+}
+
+@keyframes orbitSpin {
+    from {
+        transform: rotate(0deg) translateX(60px) rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg) translateX(60px) rotate(-360deg);
+    }
+}
+
+@keyframes meshDrift {
     0% {
-        transform: translateY(-8vh) translateX(0px);
-        opacity: 0;
-    }
-
-    5% {
-        opacity: 1;
-    }
-
-    30% {
-        transform: translateY(30vh) translateX(18px);
-    }
-
-    60% {
-        transform: translateY(65vh) translateX(-12px);
-    }
-
-    90% {
-        opacity: 0.9;
+        background-position: 0 0;
     }
 
     100% {
-        transform: translateY(108vh) translateX(6px);
-        opacity: 0;
+        background-position: 64px 64px;
     }
+}
+
+/* Infinite Marquee */
+@keyframes marquee {
+    0% {
+        transform: translateX(0);
+    }
+
+    100% {
+        transform: translateX(-50%);
+    }
+}
+
+.animate-marquee {
+    animation: marquee 20s linear infinite;
 }

@@ -499,21 +499,29 @@ export default function App() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.5, duration: 0.4 }}
-                className="mt-8 overflow-x-auto no-scrollbar"
+                className="mt-8 w-screen relative left-1/2 right-1/2 -ml-[50vw] overflow-hidden"
               >
-                <div className="flex gap-3 whitespace-nowrap pb-2">
-                  {[
-                    { icon: 'bolt', label: 'Real-time', color: 'text-[#b613ec]' },
-                    { icon: 'smart_toy', label: 'AI Insights', color: 'text-indigo-400' },
-                    { icon: 'cloud_off', label: 'Offline', color: 'text-emerald-400' },
-                    { icon: 'security', label: 'Secure', color: 'text-orange-400' },
-                  ].map(pill => (
-                    <div key={pill.label} className="flex items-center gap-2 glass-pill px-4 py-2.5 rounded-full shrink-0">
-                      <span className={`material-symbols-outlined text-sm ${pill.color}`}>{pill.icon}</span>
-                      <span className="text-sm font-medium text-[#F4F4F8]">{pill.label}</span>
+                <div className="flex animate-marquee gap-4 whitespace-nowrap">
+                  {[...Array(2)].map((_, idx) => (
+                    <div key={idx} className="flex gap-4 items-center">
+                      {[
+                        { icon: 'bolt', label: 'Real-time', color: '#b613ec' },
+                        { icon: 'smart_toy', label: 'AI Insights', color: '#818cf8' },
+                        { icon: 'cloud_off', label: 'Works Offline', color: '#34d399' },
+                        { icon: 'lock', label: 'Secure Encryption', color: '#fb923c' },
+                        { icon: 'analytics', label: 'Smart Analytics', color: '#f472b6' },
+                      ].map((item) => (
+                        <div key={item.label} className="flex items-center gap-2 glass-pill px-5 py-2.5 rounded-full border border-white/5">
+                          <span className="material-symbols-outlined text-sm" style={{ color: item.color }}>{item.icon}</span>
+                          <span className="text-xs font-bold uppercase tracking-widest text-[#F4F4F8]">{item.label}</span>
+                        </div>
+                      ))}
                     </div>
                   ))}
                 </div>
+                {/* Fade edges */}
+                <div className="absolute inset-y-0 left-0 w-20 bg-gradient-to-r from-[#0A0A0F] to-transparent z-10" />
+                <div className="absolute inset-y-0 right-0 w-20 bg-gradient-to-l from-[#0A0A0F] to-transparent z-10" />
               </motion.div>
             </motion.div>
           )}
