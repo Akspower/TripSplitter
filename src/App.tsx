@@ -14,29 +14,50 @@ import TripSetup from './components/TripSetup';
 import TripJoin from './components/TripJoin';
 import ExpenseForm from './components/ExpenseForm';
 
+// ── Synchronous helpers — run BEFORE first render ─────────────────────
+function hydrateTripFromCache(): { trip: Trip | null; myId: string } {
+  const savedTripId = localStorage.getItem('tripId');
+  const savedMyId = localStorage.getItem('myId');
+  const cachedJson = localStorage.getItem('cachedTrip');
+  if (savedTripId && savedMyId && cachedJson) {
+    try {
+      const cached = JSON.parse(cachedJson);
+      if (cached.id === savedTripId) return { trip: cached, myId: savedMyId };
+    } catch { /* ignore */ }
+  }
+  return { trip: null, myId: savedMyId || '' };
+}
+
+function hydrateViewMode(): { viewMode: 'landing' | 'create' | 'join'; initialTripId: string } {
+  const params = new URLSearchParams(window.location.search);
+  const joinId = params.get('join');
+  if (joinId) return { viewMode: 'join', initialTripId: joinId };
+  const hs = window.history.state;
+  if (hs?.viewMode) return { viewMode: hs.viewMode, initialTripId: hs.initialTripId || '' };
+  if (localStorage.getItem('trip_setup_state')) return { viewMode: 'create', initialTripId: '' };
+  return { viewMode: 'landing', initialTripId: '' };
+}
+
 export default function App() {
-  const [currentTrip, setCurrentTrip] = useState<Trip | null>(null);
-  const [myId, setMyId] = useState<string>('');
-  const [viewMode, setViewMode] = useState<'landing' | 'create' | 'join'>('landing');
-  const [initialTripId, setInitialTripId] = useState<string>('');
+  // ── All state hydrated synchronously — first render is correct ──
+  const [currentTrip, setCurrentTrip] = useState<Trip | null>(() => hydrateTripFromCache().trip);
+  const [myId, setMyId] = useState<string>(() => hydrateTripFromCache().myId);
+  const [viewMode, setViewMode] = useState<'landing' | 'create' | 'join'>(() => hydrateViewMode().viewMode);
+  const [initialTripId] = useState<string>(() => hydrateViewMode().initialTripId);
 
   const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; title: string; message: string; onConfirm: () => void; isDestructive?: boolean }>({
     isOpen: false, title: '', message: '', onConfirm: () => { }, isDestructive: false
   });
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const joinId = params.get('join');
-    if (joinId) {
-      setInitialTripId(joinId);
-      setViewMode('join');
-    }
-  }, []);
-
   const [showAddExpense, setShowAddExpense] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [loadingTrip, setLoadingTrip] = useState(true);
+  // Only show loading if we need to fetch and have NO cached data
+  const [loadingTrip, setLoadingTrip] = useState(() => {
+    const savedTripId = localStorage.getItem('tripId');
+    const savedMyId = localStorage.getItem('myId');
+    return !!(savedTripId && savedMyId && !localStorage.getItem('cachedTrip'));
+  });
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
 
   useEffect(() => {
@@ -76,14 +97,9 @@ export default function App() {
 
     window.addEventListener('popstate', handlePopState);
 
-    // On mount, if we have state in history, use it
-    const initialState = window.history.state;
-    if (initialState) {
-      if (initialState.viewMode) setViewMode(initialState.viewMode);
-      if (initialState.initialTripId) setInitialTripId(initialState.initialTripId);
-      // Note: Trip hydration is handled by localStorage effect
-    } else {
-      window.history.replaceState({ viewMode: 'landing', isTripActive: !!currentTrip, initialTripId }, '');
+    // Set initial history state if not already set (viewMode already hydrated synchronously)
+    if (!window.history.state) {
+      window.history.replaceState({ viewMode, isTripActive: !!currentTrip, initialTripId }, '');
     }
 
     return () => window.removeEventListener('popstate', handlePopState);
@@ -124,29 +140,15 @@ export default function App() {
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, [currentTrip]);
 
+  // Background server sync on mount (state already hydrated synchronously)
   useEffect(() => {
     const savedTripId = localStorage.getItem('tripId');
     const savedMyId = localStorage.getItem('myId');
-    const cachedTripJson = localStorage.getItem('cachedTrip');
-
     if (savedTripId && savedMyId) {
-      setMyId(savedMyId);
-      if (cachedTripJson) {
-        try {
-          const cachedTrip = JSON.parse(cachedTripJson);
-          if (cachedTrip.id === savedTripId) {
-            setCurrentTrip(cachedTrip);
-            setLoadingTrip(false);
-          }
-        } catch (e) {
-          console.error("Failed to parse cached trip", e);
-        }
-      }
-      loadTrip(savedTripId, !!cachedTripJson);
-    } else {
-      if (localStorage.getItem('trip_setup_state')) setViewMode('create');
-      setLoadingTrip(false);
+      // Silent refresh — cached trip already rendered
+      loadTrip(savedTripId, true);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -288,232 +290,207 @@ export default function App() {
         onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
       />
 
-      <AnimatePresence mode="popLayout">
-        {loadingTrip ? (
-          <motion.div
-            key="loading"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            className="flex-1 flex items-center justify-center p-6 relative z-10"
-          >
-            <div className="w-full max-w-sm flex flex-col items-center gap-4">
-              <div className="w-12 h-12 rounded-full border-2 border-[#b613ec] border-t-transparent animate-spin" />
-              <p className="text-sm text-[rgba(244,244,248,0.4)] font-medium">Loading your trip...</p>
+      {loadingTrip ? (
+        <div className="flex-1 flex items-center justify-center p-6 relative z-10">
+          <div className="w-full max-w-sm flex flex-col items-center gap-4">
+            <div className="w-12 h-12 rounded-full border-2 border-[#b613ec] border-t-transparent animate-spin" />
+            <p className="text-sm text-[rgba(244,244,248,0.4)] font-medium">Loading your trip...</p>
+          </div>
+        </div>
+      ) : currentTrip ? (
+        <div className="flex-1 flex flex-col relative z-10 overflow-auto no-scrollbar">
+          <Header
+            key="active-session-header"
+            tripName={currentTrip.name}
+            destination={currentTrip.destination}
+            startDate={currentTrip.startDate}
+            endDate={currentTrip.endDate}
+            onReset={handleReset}
+            isSyncing={isSyncing}
+            isOffline={isOffline}
+            isCreator={currentTrip.creatorId === myId}
+            onDelete={currentTrip.creatorId === myId ? handleDeleteTrip : undefined}
+            showLogout={true}
+            onExportPDF={() => PDFService.generateTripReport(currentTrip)}
+            tripId={currentTrip.id}
+          />
+          <Dashboard
+            trip={currentTrip}
+            myId={myId}
+            onAddExpense={() => { setEditingExpense(null); setShowAddExpense(true); }}
+            onEditExpense={(e) => { setEditingExpense(e); setShowAddExpense(true); }}
+            onDeleteExpense={handleDeleteExpense}
+            onRefreshTrip={() => loadTrip(currentTrip.id)}
+            onExportPDF={() => PDFService.generateTripReport(currentTrip)}
+          />
+          {showAddExpense && (
+            <ExpenseForm
+              members={currentTrip.members}
+              onAdd={editingExpense ? handleUpdateExpense : handleAddExpense}
+              onCancel={() => { setShowAddExpense(false); setEditingExpense(null); }}
+              initialData={editingExpense || undefined}
+            />
+          )}
+        </div>
+      ) : (
+        <div className="flex-1 flex flex-col relative z-10">
+          <header className="flex items-center justify-between p-5 pb-0 pt-safe">
+            <div className="flex items-center gap-3">
+              <img src="/icon-192.png" alt="TripKhata" className="w-11 h-11 rounded-xl shadow-lg shadow-[#b613ec]/30" />
+              <h2 className="text-2xl font-bold tracking-tight text-[#F4F4F8]">Trip<span className="text-[#b613ec]">Khata</span></h2>
             </div>
-          </motion.div>
-        ) : currentTrip ? (
-          <motion.div
-            key="active-trip"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15, ease: "easeOut" }}
-            className="flex-1 flex flex-col relative z-10 overflow-auto no-scrollbar"
-          >
-            <Header
-              key="active-session-header"
-              tripName={currentTrip.name}
-              destination={currentTrip.destination}
-              startDate={currentTrip.startDate}
-              endDate={currentTrip.endDate}
-              onReset={handleReset}
-              isSyncing={isSyncing}
-              isOffline={isOffline}
-              isCreator={currentTrip.creatorId === myId}
-              onDelete={currentTrip.creatorId === myId ? handleDeleteTrip : undefined}
-              showLogout={true}
-              onExportPDF={() => PDFService.generateTripReport(currentTrip)}
-              tripId={currentTrip.id}
-            />
-            <Dashboard
-              trip={currentTrip}
-              myId={myId}
-              onAddExpense={() => { setEditingExpense(null); setShowAddExpense(true); }}
-              onEditExpense={(e) => { setEditingExpense(e); setShowAddExpense(true); }}
-              onDeleteExpense={handleDeleteExpense}
-              onRefreshTrip={() => loadTrip(currentTrip.id)}
-              onExportPDF={() => PDFService.generateTripReport(currentTrip)}
-            />
-            {showAddExpense && (
-              <ExpenseForm
-                members={currentTrip.members}
-                onAdd={editingExpense ? handleUpdateExpense : handleAddExpense}
-                onCancel={() => { setShowAddExpense(false); setEditingExpense(null); }}
-                initialData={editingExpense || undefined}
-              />
-            )}
-          </motion.div>
-        ) : (
-          <motion.div
-            key="onboarding"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="flex-1 flex flex-col relative z-10"
-          >
-            <header className="flex items-center justify-between p-5 pb-0 pt-safe">
-              <div className="flex items-center gap-2.5">
-                <img src="/icon-192.png" alt="TripKhata" className="w-9 h-9 rounded-xl shadow-lg shadow-[#b613ec]/30" />
-                <h2 className="text-xl font-bold tracking-tight text-[#F4F4F8]">Trip<span className="text-[#b613ec]">Khata</span></h2>
-              </div>
-            </header>
+          </header>
 
-            <div className="flex-1 flex flex-col justify-center items-center px-5 relative z-10 pb-16 pt-6">
-              <AnimatePresence mode="popLayout">
-                {viewMode === 'landing' && (
-                  <motion.div
-                    key="landing"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.15, ease: 'easeOut' }}
-                    className="max-w-md mx-auto w-full"
+          <div className="flex-1 flex flex-col justify-center items-center px-5 relative z-10 pb-16 pt-6">
+            <AnimatePresence mode="wait" initial={false}>
+              {viewMode === 'landing' && (
+                <motion.div
+                  key="landing"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.12 }}
+                  className="max-w-md mx-auto w-full"
+                >
+                  {/* ── Premium Hero Trip Preview Card ── */}
+                  <div
+                    className="relative w-full mb-8"
                   >
-                    {/* ── Premium Hero Trip Preview Card ── */}
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.96, y: 10 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      transition={{ delay: 0.1, duration: 0.5 }}
-                      className="relative w-full mb-8"
-                    >
-                      <div className="absolute inset-x-8 -inset-y-4 bg-[#b613ec]/20 rounded-3xl blur-3xl" />
-                      <div className="relative glass-card rounded-3xl p-6 border border-white/10 overflow-hidden">
-                        <div className="absolute -top-10 -right-10 w-48 h-48 bg-[#b613ec]/20 rounded-full blur-3xl pointer-events-none" />
-                        <div className="absolute -bottom-8 -left-8 w-40 h-40 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none" />
-                        <div className="mb-5 relative z-10 pr-24">
-                          <div className="flex items-center gap-2 mb-1">
-                            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                            <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Live Trip</span>
-                          </div>
-                          <h3 className="text-xl font-bold text-[#F4F4F8] leading-tight">Goa Beach Trip 🏖️</h3>
-                          <p className="text-xs text-[rgba(244,244,248,0.4)] mt-0.5">Panaji, South Goa • 4 nights</p>
+                    <div className="absolute inset-x-8 -inset-y-4 bg-[#b613ec]/20 rounded-3xl blur-3xl" />
+                    <div className="relative glass-card rounded-3xl p-6 border border-white/10 overflow-hidden">
+                      <div className="absolute -top-10 -right-10 w-48 h-48 bg-[#b613ec]/20 rounded-full blur-3xl pointer-events-none" />
+                      <div className="absolute -bottom-8 -left-8 w-40 h-40 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none" />
+                      <div className="mb-5 relative z-10 pr-24">
+                        <div className="flex items-center gap-2 mb-1">
+                          <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                          <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Live Trip</span>
                         </div>
-                        <div className="flex items-center justify-between mb-5 relative z-10">
-                          <div className="flex items-center gap-2">
-                            {[
-                              { n: 'Arjun', g: 'from-violet-500 to-[#b613ec]' },
-                              { n: 'Priya', g: 'from-rose-400 to-pink-600' },
-                              { n: 'Sahil', g: 'from-emerald-400 to-teal-600' },
-                              { n: 'Kiran', g: 'from-amber-400 to-orange-500' },
-                            ].map((m, i) => (
-                              <div key={i} className={`w-9 h-9 rounded-xl bg-gradient-to-br ${m.g} flex items-center justify-center font-bold text-white text-sm shadow-lg border-2 border-[#0d0817]`}>
-                                {m.n[0]}
-                              </div>
-                            ))}
-                            <span className="text-[10px] font-bold text-[rgba(244,244,248,0.35)] ml-1">4 members</span>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-[9px] font-bold text-[rgba(244,244,248,0.3)] uppercase tracking-widest">Total Spent</p>
-                            <p className="text-xl font-bold text-[#F4F4F8]">₹18,420</p>
-                          </div>
-                        </div>
-                        <div className="space-y-2.5 relative z-10">
+                        <h3 className="text-xl font-bold text-[#F4F4F8] leading-tight">Goa Beach Trip 🏖️</h3>
+                        <p className="text-xs text-[rgba(244,244,248,0.4)] mt-0.5">Panaji, South Goa • 4 nights</p>
+                      </div>
+                      <div className="flex items-center justify-between mb-5 relative z-10">
+                        <div className="flex items-center gap-2">
                           {[
-                            { emoji: '🍛', name: 'Dinner at Fisherman\'s Wharf', by: 'Arjun', amount: '₹2,400', mine: '₹600' },
-                            { emoji: '🏨', name: 'Beach Resort (2 nights)', by: 'Priya', amount: '₹7,200', mine: '₹1,800' },
-                          ].map((item, i) => (
-                            <div key={i} className="flex items-center gap-3 bg-white/5 rounded-2xl px-4 py-3 border border-white/5">
-                              <span className="text-xl">{item.emoji}</span>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-bold text-[#F4F4F8] truncate">{item.name}</p>
-                                <p className="text-[10px] text-[rgba(244,244,248,0.4)]">{item.by} paid</p>
-                              </div>
-                              <div className="text-right shrink-0">
-                                <p className="text-sm font-bold text-[#F4F4F8]">{item.amount}</p>
-                                <p className="text-[10px] text-[#b613ec] font-bold">You: {item.mine}</p>
-                              </div>
+                            { n: 'Arjun', g: 'from-violet-500 to-[#b613ec]' },
+                            { n: 'Priya', g: 'from-rose-400 to-pink-600' },
+                            { n: 'Sahil', g: 'from-emerald-400 to-teal-600' },
+                            { n: 'Kiran', g: 'from-amber-400 to-orange-500' },
+                          ].map((m, i) => (
+                            <div key={i} className={`w-9 h-9 rounded-xl bg-gradient-to-br ${m.g} flex items-center justify-center font-bold text-white text-sm shadow-lg border-2 border-[#0d0817]`}>
+                              {m.n[0]}
                             </div>
                           ))}
+                          <span className="text-[10px] font-bold text-[rgba(244,244,248,0.35)] ml-1">4 members</span>
                         </div>
-                        <div className="mt-4 flex items-center justify-between bg-emerald-400/10 border border-emerald-400/25 rounded-2xl px-4 py-3 relative z-10">
-                          <div className="flex items-center gap-2">
-                            <span className="material-symbols-outlined text-emerald-400 text-sm">trending_up</span>
-                            <span className="text-xs font-bold text-[rgba(244,244,248,0.6)]">Your Net Balance</span>
-                          </div>
-                          <span className="text-base font-bold text-emerald-400">+₹3,150</span>
-                        </div>
-                        <div className="absolute top-4 right-4 z-20">
-                          <span className="px-2.5 py-1 rounded-full bg-[#b613ec]/20 border border-[#b613ec]/40 text-[9px] font-bold uppercase tracking-widest text-[#b613ec]">Made for Bharat 🇮🇳</span>
+                        <div className="text-right">
+                          <p className="text-[9px] font-bold text-[rgba(244,244,248,0.3)] uppercase tracking-widest">Total Spent</p>
+                          <p className="text-xl font-bold text-[#F4F4F8]">₹18,420</p>
                         </div>
                       </div>
-                    </motion.div>
-                    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15, duration: 0.4 }} className="mb-5">
-                      <QuoteBar category="travel" interval={9000} />
-                    </motion.div>
-                    <motion.div className="space-y-3 mb-7" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.4 }}>
-                      <h1 className="text-5xl font-bold leading-[0.95] tracking-tighter text-[#F4F4F8]">
-                        Trip<span className="text-[#b613ec]">Khata</span>
-                      </h1>
-                      <p className="text-lg text-[rgba(244,244,248,0.5)] font-light max-w-[280px]">
-                        Add bills. See who owes what. Settle at the end.
-                      </p>
-                    </motion.div>
-                    <motion.div className="flex flex-col gap-3" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.4 }}>
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.97 }}
-                        onClick={() => { localStorage.removeItem('trip_setup_state'); setViewMode('create'); }}
-                        className="w-full h-14 btn-primary rounded-2xl font-bold text-lg flex items-center justify-center gap-2"
-                      >
-                        <span className="material-symbols-outlined text-xl">add_circle</span>
-                        Plan New Trip
-                      </motion.button>
-                      <p className="text-center text-[10px] text-[rgba(244,244,248,0.25)] font-medium tracking-wide -mt-1">You'll get a Room ID — share with your squad</p>
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.97 }}
-                        onClick={() => setViewMode('join')}
-                        className="w-full h-14 glass-pill rounded-2xl font-bold text-lg text-[#F4F4F8] flex items-center justify-center border border-white/10"
-                      >
-                        <span className="material-symbols-outlined text-xl mr-2 text-[rgba(244,244,248,0.5)]">group_add</span>
-                        Join Existing
-                      </motion.button>
-                      <p className="text-center text-[10px] text-[rgba(244,244,248,0.25)] font-medium tracking-wide -mt-1">Enter the 6-digit Room ID from your friend</p>
-                    </motion.div>
-                    {/* Feature Pills */}
-                    <div className="mt-8 overflow-hidden pointer-events-none">
-                      <div className="flex animate-marquee gap-4 whitespace-nowrap">
-                        {[...Array(2)].map((_, idx) => (
-                          <div key={idx} className="flex gap-4 items-center">
-                            {[
-                              { icon: 'bolt', label: 'Real-time', color: '#b613ec' },
-                              { icon: 'smart_toy', label: 'AI Insights', color: '#818cf8' },
-                              { icon: 'cloud_off', label: 'Works Offline', color: '#34d399' },
-                              { icon: 'lock', label: 'Secure Encryption', color: '#fb923c' },
-                              { icon: 'analytics', label: 'Smart Analytics', color: '#f472b6' },
-                            ].map((item) => (
-                              <div key={item.label} className="flex items-center gap-2 glass-pill px-5 py-2.5 rounded-full border border-white/5">
-                                <span className="material-symbols-outlined text-sm" style={{ color: item.color }}>{item.icon}</span>
-                                <span className="text-xs font-bold uppercase tracking-widest text-[#F4F4F8]">{item.label}</span>
-                              </div>
-                            ))}
+                      <div className="space-y-2.5 relative z-10">
+                        {[
+                          { emoji: '🍛', name: 'Dinner at Fisherman\'s Wharf', by: 'Arjun', amount: '₹2,400', mine: '₹600' },
+                          { emoji: '🏨', name: 'Beach Resort (2 nights)', by: 'Priya', amount: '₹7,200', mine: '₹1,800' },
+                        ].map((item, i) => (
+                          <div key={i} className="flex items-center gap-3 bg-white/5 rounded-2xl px-4 py-3 border border-white/5">
+                            <span className="text-xl">{item.emoji}</span>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-bold text-[#F4F4F8] truncate">{item.name}</p>
+                              <p className="text-[10px] text-[rgba(244,244,248,0.4)]">{item.by} paid</p>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <p className="text-sm font-bold text-[#F4F4F8]">{item.amount}</p>
+                              <p className="text-[10px] text-[#b613ec] font-bold">You: {item.mine}</p>
+                            </div>
                           </div>
                         ))}
                       </div>
+                      <div className="mt-4 flex items-center justify-between bg-emerald-400/10 border border-emerald-400/25 rounded-2xl px-4 py-3 relative z-10">
+                        <div className="flex items-center gap-2">
+                          <span className="material-symbols-outlined text-emerald-400 text-sm">trending_up</span>
+                          <span className="text-xs font-bold text-[rgba(244,244,248,0.6)]">Your Net Balance</span>
+                        </div>
+                        <span className="text-base font-bold text-emerald-400">+₹3,150</span>
+                      </div>
+                      <div className="absolute top-4 right-4 z-20">
+                        <span className="px-2.5 py-1 rounded-full bg-[#b613ec]/20 border border-[#b613ec]/40 text-[9px] font-bold uppercase tracking-widest text-[#b613ec]">Made for Bharat 🇮🇳</span>
+                      </div>
                     </div>
-                  </motion.div>
-                )}
-                {viewMode === 'create' && (
-                  <motion.div key="create" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.15 }} className="w-full max-w-lg">
-                    <TripSetup onComplete={handleCreateOrJoin} onBack={() => setViewMode('landing')} />
-                  </motion.div>
-                )}
-                {viewMode === 'join' && (
-                  <motion.div key="join" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.15 }} className="w-full max-w-lg">
-                    <TripJoin onJoin={handleCreateOrJoin} onBack={() => setViewMode('landing')} initialTripId={initialTripId} />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-            {/* Footer */}
-            <div className="pb-6 pt-2 text-center relative z-10">
-              <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-[rgba(244,244,248,0.15)]">TripKhata · Made for India 🇮🇳</p>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+                  </div>
+                  <div className="mb-5">
+                    <QuoteBar category="travel" interval={9000} />
+                  </div>
+                  <div className="space-y-3 mb-7">
+                    <h1 className="text-5xl font-bold leading-[0.95] tracking-tighter text-[#F4F4F8]">
+                      Trip<span className="text-[#b613ec]">Khata</span>
+                    </h1>
+                    <p className="text-lg text-[rgba(244,244,248,0.5)] font-light max-w-[280px]">
+                      Add bills. See who owes what. Settle at the end.
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-3">
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={() => { localStorage.removeItem('trip_setup_state'); setViewMode('create'); }}
+                      className="w-full h-14 btn-primary rounded-2xl font-bold text-lg flex items-center justify-center gap-2"
+                    >
+                      <span className="material-symbols-outlined text-xl">add_circle</span>
+                      Plan New Trip
+                    </motion.button>
+                    <p className="text-center text-[10px] text-[rgba(244,244,248,0.25)] font-medium tracking-wide -mt-1">You'll get a Room ID — share with your squad</p>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={() => setViewMode('join')}
+                      className="w-full h-14 glass-pill rounded-2xl font-bold text-lg text-[#F4F4F8] flex items-center justify-center border border-white/10"
+                    >
+                      <span className="material-symbols-outlined text-xl mr-2 text-[rgba(244,244,248,0.5)]">group_add</span>
+                      Join Existing
+                    </motion.button>
+                    <p className="text-center text-[10px] text-[rgba(244,244,248,0.25)] font-medium tracking-wide -mt-1">Enter the 6-digit Room ID from your friend</p>
+                  </div>
+                  {/* Feature Pills */}
+                  <div className="mt-8 overflow-hidden pointer-events-none">
+                    <div className="flex animate-marquee gap-4 whitespace-nowrap">
+                      {[...Array(2)].map((_, idx) => (
+                        <div key={idx} className="flex gap-4 items-center">
+                          {[
+                            { icon: 'bolt', label: 'Real-time', color: '#b613ec' },
+                            { icon: 'smart_toy', label: 'AI Insights', color: '#818cf8' },
+                            { icon: 'cloud_off', label: 'Works Offline', color: '#34d399' },
+                            { icon: 'lock', label: 'Secure Encryption', color: '#fb923c' },
+                            { icon: 'analytics', label: 'Smart Analytics', color: '#f472b6' },
+                          ].map((item) => (
+                            <div key={item.label} className="flex items-center gap-2 glass-pill px-5 py-2.5 rounded-full border border-white/5">
+                              <span className="material-symbols-outlined text-sm" style={{ color: item.color }}>{item.icon}</span>
+                              <span className="text-xs font-bold uppercase tracking-widest text-[#F4F4F8]">{item.label}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+              {viewMode === 'create' && (
+                <motion.div key="create" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }} className="w-full max-w-lg">
+                  <TripSetup onComplete={handleCreateOrJoin} onBack={() => setViewMode('landing')} />
+                </motion.div>
+              )}
+              {viewMode === 'join' && (
+                <motion.div key="join" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }} className="w-full max-w-lg">
+                  <TripJoin onJoin={handleCreateOrJoin} onBack={() => setViewMode('landing')} initialTripId={initialTripId} />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+          {/* Footer */}
+          <div className="pb-6 pt-2 text-center relative z-10">
+            <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-[rgba(244,244,248,0.15)]">TripKhata · Made for India 🇮🇳</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
