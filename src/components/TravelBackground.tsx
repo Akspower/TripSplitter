@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, memo } from 'react';
 
 /**
  * TravelBackground — Premium abstract animated background
@@ -22,7 +22,7 @@ const TravelBackground: React.FC = () => {
     }, []);
 
     return (
-        <div className="fixed inset-0 overflow-hidden pointer-events-none z-0 will-change-transform" aria-hidden="true">
+        <div className="fixed inset-0 overflow-hidden pointer-events-none z-0 will-change-transform" aria-hidden="true" style={{ contain: 'strict' }}>
 
             {/* ── Layer 1: Deep aurora blobs — vivid, slow drift ── */}
             <div ref={auroraRef} className="absolute inset-0 will-change-transform"
@@ -87,8 +87,6 @@ const GlassOrbs: React.FC = () => (
                     width: o.w, height: o.h,
                     top: o.top, left: o.left,
                     background: `radial-gradient(circle at 35% 35%, ${o.bc}, transparent 70%)`,
-                    backdropFilter: `blur(${o.blur}px)`,
-                    WebkitBackdropFilter: `blur(${o.blur}px)`,
                     border: '1px solid rgba(255,255,255,0.04)',
                     opacity: o.op,
                     animation: `orbFloat ${o.dur} ease-in-out ${o.delay} infinite`,
@@ -116,7 +114,7 @@ const OrbitRing: React.FC = () => (
     </div>
 );
 
-const STARS = Array.from({ length: 40 }, (_, i) => ({
+const STARS = Array.from({ length: 15 }, (_, i) => ({
     x: ((i * 41 + 17) % 97).toFixed(1), y: ((i * 61 + 5) % 85).toFixed(1),
     r: (0.7 + (i % 3) * 0.4).toFixed(1), op: (0.1 + (i % 4) * 0.05).toFixed(2),
     dur: `${3 + (i % 5)}s`, delay: `${(i % 7) * 0.7}s`,
@@ -131,4 +129,4 @@ const Starfield: React.FC = () => (
     </svg>
 );
 
-export default TravelBackground;
+export default memo(TravelBackground);

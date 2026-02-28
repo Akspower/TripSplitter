@@ -21,18 +21,23 @@ const TABS = [
 
 type TabId = typeof TABS[number]['id'];
 
-// Simple count-up hook — animates from 0 to target over ~600ms, no library needed
+// Simple count-up hook — animates from previous value to target, no library needed
 function useCountUp(target: number, deps: unknown[] = []): number {
-    const [val, setVal] = useState(0);
+    const [val, setVal] = useState(target);
+    const prevRef = useRef(target);
     useEffect(() => {
-        let start = 0;
+        const from = prevRef.current;
+        prevRef.current = target;
+        if (from === target) return;
+        let start = from;
         const duration = 400;
         const step = 16;
-        const increment = target / (duration / step);
+        const increment = (target - from) / (duration / step);
         const timer = setInterval(() => {
             start += increment;
-            if (start >= target) { setVal(target); clearInterval(timer); }
-            else setVal(Math.round(start));
+            if ((increment > 0 && start >= target) || (increment < 0 && start <= target)) {
+                setVal(target); clearInterval(timer);
+            } else setVal(Math.round(start));
         }, step);
         return () => clearInterval(timer);
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -314,13 +319,13 @@ const Dashboard: React.FC<{
                         ))}
                     </div>
 
-                    <AnimatePresence>
+                    <AnimatePresence mode="popLayout">
                         <motion.div
                             key={activeTab}
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            transition={{ duration: 0.2 }}
+                            transition={{ duration: 0.15 }}
                         >
                             {/* ── EXPENSES TAB ── */}
                             {activeTab === 'expenses' && (
@@ -502,7 +507,7 @@ const Dashboard: React.FC<{
                                                 return (
                                                     <motion.div key={idx}
                                                         initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                                                        transition={{ delay: idx * 0.05 }}
+                                                        transition={{ duration: 0.15 }}
                                                         className={`rounded-2xl border relative overflow-hidden ${isFromMe ? 'glass-card-primary border-rose-400/30' : isToMe ? 'glass-card-primary border-emerald-400/30' : 'glass-card border-white/5 opacity-60'}`}>
                                                         {/* Top accent line */}
                                                         {isFromMe && <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-rose-500/0 via-rose-500 to-rose-500/0" />}
@@ -648,7 +653,7 @@ const Dashboard: React.FC<{
                                         </div>
                                     ) : (
                                         <div className="space-y-3">
-                                            {activityItems.map((e, idx) => {
+                                            {activityItems.map((e) => {
                                                 // Use the FULL unfiltered member list for lookups
                                                 const allMembers = trip.members;
                                                 const payer = allMembers.find(m => m.id === e.payerId);
@@ -679,7 +684,7 @@ const Dashboard: React.FC<{
                                                 return (
                                                     <motion.div key={e.id}
                                                         initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                                                        transition={{ delay: idx * 0.04, duration: 0.25 }}
+                                                        transition={{ duration: 0.15 }}
                                                         className={`glass-card rounded-2xl border overflow-hidden ${iAmParticipant ? 'border-[#b613ec]/20' : 'border-white/5'}`}
                                                     >
                                                         {/* Colored top bar */}

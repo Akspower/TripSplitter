@@ -1,4 +1,4 @@
-import { useState, useEffect, Suspense, lazy, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import toast, { Toaster } from 'react-hot-toast';
 import type { Trip, Expense } from './types';
@@ -7,15 +7,12 @@ import { PDFService } from './services/pdfService';
 
 import Header from './components/Header';
 import ConfirmDialog from './components/ui/ConfirmDialog';
-import Skeleton from './components/ui/Skeleton';
 import QuoteBar from './components/QuoteBar';
 import TravelBackground from './components/TravelBackground';
-
-// Lazy Load Heavy Components
-const Dashboard = lazy(() => import('./components/Dashboard'));
-const TripSetup = lazy(() => import('./components/TripSetup'));
-const TripJoin = lazy(() => import('./components/TripJoin'));
-const ExpenseForm = lazy(() => import('./components/ExpenseForm'));
+import Dashboard from './components/Dashboard';
+import TripSetup from './components/TripSetup';
+import TripJoin from './components/TripJoin';
+import ExpenseForm from './components/ExpenseForm';
 
 export default function App() {
   const [currentTrip, setCurrentTrip] = useState<Trip | null>(null);
@@ -291,28 +288,19 @@ export default function App() {
         onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
       />
 
-      <AnimatePresence>
+      <AnimatePresence mode="popLayout">
         {loadingTrip ? (
           <motion.div
             key="loading"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.15 }}
             className="flex-1 flex items-center justify-center p-6 relative z-10"
           >
-            <div className="w-full max-w-sm space-y-8 animate-pulse">
-              <div className="flex justify-center">
-                <Skeleton className="w-20 h-20 rounded-full" />
-              </div>
-              <div className="space-y-4">
-                <Skeleton className="h-10 w-3/4 mx-auto rounded-xl" />
-                <Skeleton className="h-4 w-1/2 mx-auto rounded-lg" />
-              </div>
-              <div className="space-y-3 pt-6">
-                <Skeleton className="h-14 w-full rounded-2xl" />
-                <Skeleton className="h-14 w-full rounded-2xl" />
-              </div>
+            <div className="w-full max-w-sm flex flex-col items-center gap-4">
+              <div className="w-12 h-12 rounded-full border-2 border-[#b613ec] border-t-transparent animate-spin" />
+              <p className="text-sm text-[rgba(244,244,248,0.4)] font-medium">Loading your trip...</p>
             </div>
           </motion.div>
         ) : currentTrip ? (
@@ -321,7 +309,7 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.25, ease: "easeOut" }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
             className="flex-1 flex flex-col relative z-10 overflow-auto no-scrollbar"
           >
             <Header
@@ -339,32 +327,23 @@ export default function App() {
               onExportPDF={() => PDFService.generateTripReport(currentTrip)}
               tripId={currentTrip.id}
             />
-            <Suspense fallback={
-              <div className="p-6 max-w-7xl mx-auto w-full space-y-6 animate-pulse">
-                <div className="flex gap-4">
-                  <Skeleton className="h-64 w-1/3 rounded-3xl" />
-                  <Skeleton className="h-64 w-2/3 rounded-3xl" />
-                </div>
-              </div>
-            }>
-              <Dashboard
-                trip={currentTrip}
-                myId={myId}
-                onAddExpense={() => { setEditingExpense(null); setShowAddExpense(true); }}
-                onEditExpense={(e) => { setEditingExpense(e); setShowAddExpense(true); }}
-                onDeleteExpense={handleDeleteExpense}
-                onRefreshTrip={() => loadTrip(currentTrip.id)}
-                onExportPDF={() => PDFService.generateTripReport(currentTrip)}
+            <Dashboard
+              trip={currentTrip}
+              myId={myId}
+              onAddExpense={() => { setEditingExpense(null); setShowAddExpense(true); }}
+              onEditExpense={(e) => { setEditingExpense(e); setShowAddExpense(true); }}
+              onDeleteExpense={handleDeleteExpense}
+              onRefreshTrip={() => loadTrip(currentTrip.id)}
+              onExportPDF={() => PDFService.generateTripReport(currentTrip)}
+            />
+            {showAddExpense && (
+              <ExpenseForm
+                members={currentTrip.members}
+                onAdd={editingExpense ? handleUpdateExpense : handleAddExpense}
+                onCancel={() => { setShowAddExpense(false); setEditingExpense(null); }}
+                initialData={editingExpense || undefined}
               />
-              {showAddExpense && (
-                <ExpenseForm
-                  members={currentTrip.members}
-                  onAdd={editingExpense ? handleUpdateExpense : handleAddExpense}
-                  onCancel={() => { setShowAddExpense(false); setEditingExpense(null); }}
-                  initialData={editingExpense || undefined}
-                />
-              )}
-            </Suspense>
+            )}
           </motion.div>
         ) : (
           <motion.div
@@ -382,14 +361,14 @@ export default function App() {
             </header>
 
             <div className="flex-1 flex flex-col justify-center items-center px-5 relative z-10 pb-16 pt-6">
-              <AnimatePresence>
+              <AnimatePresence mode="popLayout">
                 {viewMode === 'landing' && (
                   <motion.div
                     key="landing"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.3, ease: 'easeOut' }}
+                    transition={{ duration: 0.15, ease: 'easeOut' }}
                     className="max-w-md mx-auto w-full"
                   >
                     {/* ── Premium Hero Trip Preview Card ── */}
@@ -517,17 +496,13 @@ export default function App() {
                   </motion.div>
                 )}
                 {viewMode === 'create' && (
-                  <motion.div key="create" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} transition={{ duration: 0.3 }} className="w-full max-w-lg">
-                    <Suspense fallback={<div className="p-10 text-center"><Skeleton className="h-96 w-full rounded-2xl" /></div>}>
-                      <TripSetup onComplete={handleCreateOrJoin} onBack={() => setViewMode('landing')} />
-                    </Suspense>
+                  <motion.div key="create" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.15 }} className="w-full max-w-lg">
+                    <TripSetup onComplete={handleCreateOrJoin} onBack={() => setViewMode('landing')} />
                   </motion.div>
                 )}
                 {viewMode === 'join' && (
-                  <motion.div key="join" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} transition={{ duration: 0.3 }} className="w-full max-w-lg">
-                    <Suspense fallback={<div className="p-10 text-center"><Skeleton className="h-64 w-full rounded-2xl" /></div>}>
-                      <TripJoin onJoin={handleCreateOrJoin} onBack={() => setViewMode('landing')} initialTripId={initialTripId} />
-                    </Suspense>
+                  <motion.div key="join" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.15 }} className="w-full max-w-lg">
+                    <TripJoin onJoin={handleCreateOrJoin} onBack={() => setViewMode('landing')} initialTripId={initialTripId} />
                   </motion.div>
                 )}
               </AnimatePresence>
