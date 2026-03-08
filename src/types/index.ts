@@ -42,7 +42,6 @@ export interface Trip {
   ageGroup?: AgeGroup;
 }
 
-// --- THIS IS THE MISSING PART CAUSING THE CRASH ---
 export interface Debt {
   from: string;
   to: string;

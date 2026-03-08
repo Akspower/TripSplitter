@@ -1,6 +1,6 @@
 export interface OfflineAction {
     id: string;
-    type: 'ADD_EXPENSE' | 'DELETE_EXPENSE' | 'REMOVE_MEMBER';
+    type: 'ADD_EXPENSE';
     payload: any;
     timestamp: number;
 }
