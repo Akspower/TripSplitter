@@ -81,10 +81,11 @@ const Dashboard: React.FC<{
     const [insights, setInsights] = useState<string | null>(null);
     const [loadingInsights, setLoadingInsights] = useState(false);
     const [showManageTeam, setShowManageTeam] = useState(false);
+    const [showQRExpanded, setShowQRExpanded] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [hiddenMemberIds, setHiddenMemberIds] = useState<Set<string>>(new Set());
     const [expenseToDelete, setExpenseToDelete] = useState<string | null>(null);
-    const [paidDebtKeys, setPaidDebtKeys] = useState<Set<string>>(new Set()); // locally track marked-as-paid
+
     const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; title: string; message: string; onConfirm: () => void; isDestructive?: boolean }>({
         isOpen: false, title: '', message: '', onConfirm: () => { }, isDestructive: false
     });
@@ -172,14 +173,7 @@ const Dashboard: React.FC<{
     const theyOweMe = useMemo(() => debts.filter(d => d.to === myId), [debts, myId]);
     const totalMyOwed = useMemo(() => iOwe.reduce((s, d) => s + d.amount, 0), [iOwe]);
     const totalTheyOweMe = useMemo(() => theyOweMe.reduce((s, d) => s + d.amount, 0), [theyOweMe]);
-    // Progress: how many of MY debts have been locally marked as paid
-    const myDebtKeys = useMemo(() => iOwe.map(d => `${d.from}-${d.to}`), [iOwe]);
-    const settleProgress = useMemo(() => {
-        if (iOwe.length === 0 && theyOweMe.length === 0) return 100;
-        if (iOwe.length === 0) return 100; // I don't owe anyone — I'm settled
-        const paidCount = myDebtKeys.filter(k => paidDebtKeys.has(k)).length;
-        return Math.round((paidCount / iOwe.length) * 100);
-    }, [iOwe, theyOweMe, myDebtKeys, paidDebtKeys]);
+
 
     // Count-up animation for balance number
     const animatedBalance = useCountUp(Math.abs(myBalance), [myBalance]);
@@ -382,7 +376,7 @@ const Dashboard: React.FC<{
                                             return (
                                                 <motion.div key={e.id}
                                                     initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                                                    transition={{ duration: 0.2 }}
+                                                    transition={{ duration: 0.1 }}
                                                     className={`glass-card rounded-2xl p-4 flex items-start gap-3 transition-all duration-200 active:scale-[0.98] group ${!e.participantIds.includes(myId) ? 'opacity-40' : ''}`}>
                                                     <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center text-2xl border border-white/5 shrink-0 group-hover:bg-[#b613ec]/10 transition-colors">
                                                         {CATEGORY_EMOJI[e.category] || '🧾'}
@@ -491,34 +485,10 @@ const Dashboard: React.FC<{
                                                 const isFromMe = d.from === myId;
                                                 const isToMe = d.to === myId;
 
-                                                const debtKey = `${d.from}-${d.to}`;
-                                                const isPaid = paidDebtKeys.has(debtKey);
-
-                                                // Show a compact 'Paid' card if marked as paid
-                                                if (isPaid) {
-                                                    return (
-                                                        <motion.div key={idx}
-                                                            initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-                                                            className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4 flex items-center gap-3">
-                                                            <span className="material-symbols-outlined text-emerald-400 text-2xl">check_circle</span>
-                                                            <div className="flex-1 min-w-0">
-                                                                <p className="text-sm font-bold text-emerald-400">Payment Confirmed</p>
-                                                                <p className="text-xs text-[rgba(244,244,248,0.4)] truncate">
-                                                                    {isFromMe ? 'You' : fromMember?.name} → {isToMe ? 'You' : toMember?.name} — {formatINR(d.amount)}
-                                                                </p>
-                                                            </div>
-                                                            <button onClick={() => setPaidDebtKeys(prev => { const n = new Set(prev); n.delete(debtKey); return n; })}
-                                                                className="text-[10px] text-[rgba(244,244,248,0.3)] hover:text-rose-400 transition-colors font-bold uppercase tracking-wide">
-                                                                Undo
-                                                            </button>
-                                                        </motion.div>
-                                                    );
-                                                }
-
                                                 return (
                                                     <motion.div key={idx}
-                                                        initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                                                        transition={{ duration: 0.15 }}
+                                                        initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
+                                                        transition={{ duration: 0.1 }}
                                                         className={`rounded-2xl border relative overflow-hidden card-3d ${isFromMe ? 'glass-card-primary border-rose-400/30' : isToMe ? 'glass-card-primary border-emerald-400/30' : 'glass-card border-white/5 opacity-60'}`}>
                                                         {/* Top accent line */}
                                                         {isFromMe && <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-rose-500/0 via-rose-500 to-rose-500/0" />}
@@ -540,7 +510,7 @@ const Dashboard: React.FC<{
                                                             )}
 
                                                             {/* Transaction flow row */}
-                                                            <div className="flex items-center gap-3 mb-4">
+                                                            <div className="flex items-center gap-3">
                                                                 {/* From */}
                                                                 <div className="flex items-center gap-2 flex-1 min-w-0">
                                                                     <InitialAvatar name={fromMember?.name || '?'} size="w-11 h-11" index={fromIdx} />
@@ -571,79 +541,12 @@ const Dashboard: React.FC<{
                                                                     </div>
                                                                 </div>
                                                             </div>
-
-                                                            {/* Action row */}
-                                                            {isFromMe && (
-                                                                <button
-                                                                    onClick={() => {
-                                                                        const debtKey = `${d.from}-${d.to}`;
-                                                                        setPaidDebtKeys(prev => new Set(prev).add(debtKey));
-                                                                        toast.success(`Marked as paid!`, { icon: '✅' });
-                                                                    }}
-                                                                    className="w-full py-2.5 rounded-xl bg-rose-500/15 border border-rose-500/25 text-rose-300 text-xs font-bold uppercase tracking-wider hover:bg-rose-500/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-                                                                >
-                                                                    <span className="material-symbols-outlined text-sm">check_circle</span>
-                                                                    Mark as Paid — {formatINR(d.amount)}
-                                                                </button>
-                                                            )}
-                                                            {isToMe && (
-                                                                <div className="flex items-center gap-2">
-                                                                    <p className="text-xs text-[rgba(244,244,248,0.35)] flex-1">
-                                                                        {fromMember?.name} hasn't paid yet
-                                                                    </p>
-                                                                    <button
-                                                                        onClick={() => {
-                                                                            const msg = `👋 Hey ${fromMember?.name}! Reminder — you owe ${formatINR(d.amount)} for "${trip.name}". View here: ${window.location.origin}/?join=${trip.id}`;
-                                                                            if (navigator.share) {
-                                                                                navigator.share({ title: 'Payment Reminder', text: msg }).catch(() => { });
-                                                                            } else {
-                                                                                navigator.clipboard.writeText(msg).catch(() => { });
-                                                                                toast.success('Reminder copied!', { icon: '📋' });
-                                                                            }
-                                                                        }}
-                                                                        className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-bold active:scale-[0.97] transition-all touch-manipulation"
-                                                                    >
-                                                                        <span className="material-symbols-outlined text-sm">share</span>
-                                                                        Remind
-                                                                    </button>
-                                                                </div>
-                                                            )}
                                                         </div>
                                                     </motion.div>
                                                 );
                                             })
                                         )}
                                     </div>
-
-                                    {/* ── Settlement Progress ── */}
-                                    {debts.length > 0 && iOwe.length > 0 && (
-                                        <div className="glass-card rounded-2xl p-5 border border-white/8 flex items-center gap-5">
-                                            <div className="relative w-20 h-20 shrink-0 flex items-center justify-center">
-                                                <svg className="w-20 h-20 -rotate-90" viewBox="0 0 100 100">
-                                                    <circle cx="50" cy="50" r="40" fill="transparent" stroke="rgba(255,255,255,0.05)" strokeWidth="10" />
-                                                    <circle cx="50" cy="50" r="40" fill="transparent" stroke={settleProgress === 100 ? '#34d399' : '#b613ec'} strokeWidth="10"
-                                                        strokeDasharray="251.2"
-                                                        strokeDashoffset={`${251.2 * (1 - settleProgress / 100)}`}
-                                                        strokeLinecap="round"
-                                                        style={{ filter: `drop-shadow(0 0 6px ${settleProgress === 100 ? 'rgba(52,211,153,0.5)' : 'rgba(182,19,236,0.5)'})`, transition: 'stroke-dashoffset 0.7s ease' }} />
-                                                </svg>
-                                                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                                    <span className="text-xl font-bold text-[#F4F4F8]">{settleProgress}%</span>
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <p className="font-bold text-[#F4F4F8] text-sm mb-1">My Payments</p>
-                                                <p className="text-xs text-[rgba(244,244,248,0.4)] leading-relaxed">
-                                                    {paidDebtKeys.size === 0
-                                                        ? `${iOwe.length} payment${iOwe.length > 1 ? 's' : ''} pending — tap \"Mark as Paid\" above`
-                                                        : paidDebtKeys.size >= iOwe.length
-                                                            ? 'All your payments confirmed! 🎉'
-                                                            : `${paidDebtKeys.size} of ${iOwe.length} payments confirmed`
-                                                    }
-                                                </p>
-                                            </div>
-                                        </div>
-                                    )}
                                 </div>
                             )}
 
@@ -899,20 +802,49 @@ const Dashboard: React.FC<{
                                 </button>
                             </div>
 
-                            {/* QR Code */}
-                            <div className="mb-5 flex flex-col items-center gap-3">
-                                <div className="bg-white rounded-2xl p-4 shadow-lg">
+                            {/* QR Code — small preview, tap to expand */}
+                            <div className="mb-5 flex flex-col items-center gap-2">
+                                <button onClick={() => setShowQRExpanded(true)} className="bg-white rounded-xl p-2 shadow-lg hover:shadow-xl transition-shadow active:scale-95">
                                     <QRCodeSVG
                                         value={`${window.location.origin}/?join=${trip.id}`}
-                                        size={160}
+                                        size={80}
                                         bgColor="#ffffff"
                                         fgColor="#0A0A0F"
                                         level="H"
                                         includeMargin={false}
                                     />
-                                </div>
-                                <p className="text-[10px] text-[rgba(244,244,248,0.35)] font-bold uppercase tracking-widest">Scan to join this trip</p>
+                                </button>
+                                <p className="text-[10px] text-[rgba(244,244,248,0.35)] font-bold uppercase tracking-widest">Tap QR to enlarge</p>
                             </div>
+
+                            {/* QR Expanded Overlay */}
+                            <AnimatePresence initial={false}>
+                                {showQRExpanded && (
+                                    <motion.div
+                                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                                        transition={{ duration: 0.15 }}
+                                        className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-sm flex items-center justify-center"
+                                        onClick={() => setShowQRExpanded(false)}
+                                    >
+                                        <motion.div
+                                            initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.8, opacity: 0 }}
+                                            transition={{ duration: 0.15 }}
+                                            className="bg-white rounded-3xl p-6 shadow-2xl"
+                                            onClick={e => e.stopPropagation()}
+                                        >
+                                            <QRCodeSVG
+                                                value={`${window.location.origin}/?join=${trip.id}`}
+                                                size={200}
+                                                bgColor="#ffffff"
+                                                fgColor="#0A0A0F"
+                                                level="H"
+                                                includeMargin={false}
+                                            />
+                                            <p className="text-center text-xs text-gray-500 font-bold mt-3 uppercase tracking-widest">Scan to join</p>
+                                        </motion.div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
 
                             <div className="space-y-3 max-h-[55vh] overflow-y-auto pr-1">
                                 {optimisticTrip.members.map((m, i) => (

@@ -61,6 +61,7 @@
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
         border: 1px solid rgba(255, 255, 255, 0.08);
+        contain: content;
     }
 
     .glass-card-primary {
@@ -78,7 +79,7 @@
     }
 
     .card-3d {
-        transition: transform 0.4s cubic-bezier(0.2, 1, 0.2, 1), box-shadow 0.4s cubic-bezier(0.2, 1, 0.2, 1);
+        transition: transform 0.2s cubic-bezier(0.2, 1, 0.2, 1), box-shadow 0.2s cubic-bezier(0.2, 1, 0.2, 1);
         transform-style: preserve-3d;
         will-change: transform, box-shadow;
     }
